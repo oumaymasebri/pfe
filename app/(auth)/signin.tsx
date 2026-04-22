@@ -3,7 +3,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ImageBackground,
@@ -105,11 +105,13 @@ const SignInScreen = () => {
       const user = userCredential.user;
       if (profile.exists()) {
         // Sauvegarde dans Redux
+        
         dispatch(
           setUser({
             user: {
               id: user.uid,
               email: user.email || email,
+              phoneNumber: profile.data().phoneNumber || "",
               name: profile.data().fullName || email.split("@")[0],
               isAdmin: profile.data().role === "admin" ? true : false,
             },
@@ -189,7 +191,7 @@ const SignInScreen = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={[styles.title,{marginTop: 25}]}>Welcome Back</Text>
           <Text style={styles.subtitle}>
             Please enter your details to sign in
           </Text>
@@ -330,6 +332,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
+
     fontSize: 28,
     fontWeight: "bold",
     color: "#1a1a1a",
