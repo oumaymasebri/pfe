@@ -222,28 +222,6 @@ const ProfileScreen = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // const handleSaveProfile = async () => {
-  //       const currentUser = auth.currentUser;
-  //   if (!validateProfile()) return;
-  //   setSavingProfile(true);
-  //   try {
-  //     await updateDoc(doc(db, "users", currentUser?.uid), {
-  //       fullName: profileForm.name,
-  //       phoneNumber: profileForm.phone
-  //     });
-
-  //     await new Promise((res) => setTimeout(res, 1200));
-  //     Alert.alert("✅ Succès", "Profil mis à jour avec succès !");
-  //     setEditOpen(false);
-  //   } catch {
-  //     Alert.alert("Erreur", "Une erreur est survenue.");
-  //   } finally {
-  //     setSavingProfile(false);
-  //   }
-  // };
-
-  // ── Force du mot de passe ──
-
 const handleSaveProfile = async () => {
   if (!validateProfile()) return;
   setSavingProfile(true);
@@ -284,13 +262,6 @@ const handleSaveProfile = async () => {
       phoneNumber: profileForm.phone,
       ...(emailChanged && { email: profileForm.email.trim() }),
     });
-
-    // ── ✅ Mettre à jour Redux store ──
-    // dispatch(updateUser({
-    //   name: profileForm.name,
-    //   phoneNumber: profileForm.phone,
-    //   ...(emailChanged && { email: profileForm.email.trim() }),
-    // }));
 
     setProfileForm((p) => ({ ...p, currentPassword: "" }));
     setEditOpen(false);
@@ -347,7 +318,6 @@ const handleSaveProfile = async () => {
     );
     await reauthenticateWithCredential(currentUser, credential);
 
-    // Changer le mot de passe
     await updatePassword(currentUser, passwordForm.newPassword);
 
     Alert.alert("✅ Succès", "Mot de passe modifié avec succès !");

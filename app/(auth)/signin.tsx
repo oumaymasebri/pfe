@@ -103,9 +103,7 @@ const SignInScreen = () => {
       const profile = await getDoc(doc(db, "users", userCredential.user.uid));
 
       const user = userCredential.user;
-      if (profile.exists()) {
-        // Sauvegarde dans Redux
-        
+      if (profile.exists()) {        
         dispatch(
           setUser({
             user: {
