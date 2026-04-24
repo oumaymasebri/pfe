@@ -1,33 +1,56 @@
 import Formulaire from "@/components/formulaire";
-import { db } from "@/configFirebase";
+import { auth, db } from "@/configFirebase"; // Zid auth hna
 import { useRouter } from "expo-router";
-import { addDoc, collection } from "firebase/firestore";
+import { createUserWithEmailAndPassword } from "firebase/auth"; // Importi hedhi
+import { doc, setDoc } from "firebase/firestore"; // Badel addDoc b setDoc
 import { Alert, Platform, StyleSheet, View } from "react-native";
 
 export default function AddUserPage() {
   const router = useRouter();
 
-  // Cette fonction sera appelée par le composant Formulaire
   const handleAddUser = async (data: any) => {
     try {
-      // 1. Enregistrement dans Firebase
-      await addDoc(collection(db, "users"), {
-        ...data,
-        createdAt: new Date().toISOString(), // Ajoute la date actuelle
+      // 1. Création mta3 el compte fi Authentication
+      // Lezem t-passi el auth, l'email, wel password li jeyin mel Formulaire
+      console.log("Données reçues du formulaire :", data); // Debug
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        data.email,
+        data.password,
+      );
+
+      const user = userCredential.user;
+
+      // 2. Enregistrement fi Firestore
+      // Nestas3mlou setDoc m3a doc(db, "users", user.uid)
+      // bech el User ID ykoun houwa bidou mta3 el Auth
+      await setDoc(doc(db, "users", user.uid), {
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber || "",
+        role: data.role,
+        status: data.status,
+        createdAt: new Date().toISOString(),
       });
 
-      // 2. Notification de succès
+      // 3. Notification
       if (Platform.OS === "web") {
-        alert("Utilisateur ajouté avec succès !");
+        alert("Utilisateur ajouté avec succès dans Auth et Firestore !");
       } else {
         Alert.alert("Succès", "Utilisateur ajouté !");
       }
 
-      // 3. Retour à la liste des utilisateurs
       router.replace("/users");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de l'ajout :", error);
-      alert("Une erreur est survenue lors de l'ajout.");
+
+      // Error handling bech ta3ref chnouwa el mochkla (email déjà utilisé, etc.)
+      let errorMessage = "Une erreur est survenue.";
+      if (error.code === "auth/email-already-in-use")
+        errorMessage = "Cet email est déjà utilisé.";
+      if (error.code === "auth/weak-password")
+        errorMessage = "Le mot de passe est trop faible.";
+
+      alert(errorMessage);
     }
   };
 

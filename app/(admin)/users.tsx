@@ -153,7 +153,12 @@ export default function UserManagement() {
                   </View>
 
                   <View style={styles.cardActions as ViewStyle}>
-                    <TouchableOpacity style={styles.editButton as any}>
+                    <TouchableOpacity
+                      style={styles.editButton as any}
+                      onPress={() =>
+                        router.push(`/(admin)/editUser/${user.id}`)
+                      } // Redirection avec l'ID
+                    >
                       <Feather name="edit-2" size={16} color="#334155" />
                       <Text style={styles.editButtonText as TextStyle}>
                         Modifier

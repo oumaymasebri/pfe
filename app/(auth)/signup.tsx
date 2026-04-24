@@ -30,6 +30,7 @@ import { useDispatch, useSelector } from "react-redux";
 const SignUpScreen = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState(""); // Ajout Téléphone
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -40,6 +41,7 @@ const SignUpScreen = () => {
   const [errors, setErrors] = useState({
     fullName: false,
     email: false,
+    phoneNumber: false, // Ajout Erreur Téléphone
     password: false,
     confirmPassword: false,
   });
@@ -53,6 +55,7 @@ const SignUpScreen = () => {
     const newErrors = {
       fullName: false,
       email: false,
+      phoneNumber: false,
       password: false,
       confirmPassword: false,
     };
@@ -69,6 +72,12 @@ const SignUpScreen = () => {
       hasError = true;
     } else if (!email.includes("@") || !email.includes(".")) {
       newErrors.email = true;
+      hasError = true;
+    }
+
+    // Validation Téléphone (simple check si vide ou trop court)
+    if (!phoneNumber.trim() || phoneNumber.length < 8) {
+      newErrors.phoneNumber = true;
       hasError = true;
     }
 
@@ -115,6 +124,8 @@ const SignUpScreen = () => {
 
       await setDoc(doc(db, "users", user.uid), {
         fullName: fullName.trim(),
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(), // Enregistrement dans Firestore
         createdAt: new Date().toISOString(),
         emailVerified: false,
         role: "client",
@@ -210,6 +221,32 @@ const SignUpScreen = () => {
           </View>
           {errors.email && (
             <Text style={styles.errorText}>Email invalide ou vide</Text>
+          )}
+        </View>
+
+        {/* Phone Number - NOUVEAU CHAMP */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Phone Number</Text>
+          <View
+            style={[
+              styles.inputWrapper,
+              errors.phoneNumber && styles.inputError,
+            ]}
+          >
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: +216 22 123 456"
+              value={phoneNumber}
+              onChangeText={(text) => {
+                setPhoneNumber(text);
+                if (errors.phoneNumber)
+                  setErrors({ ...errors, phoneNumber: false });
+              }}
+              keyboardType="phone-pad"
+            />
+          </View>
+          {errors.phoneNumber && (
+            <Text style={styles.errorText}>Numéro de téléphone invalide</Text>
           )}
         </View>
 
@@ -317,14 +354,14 @@ const SignUpScreen = () => {
           <View style={styles.line} />
         </View>
 
-        <View style={styles.socialButtons}>
+        <div style={styles.socialButtons}>
           <TouchableOpacity style={styles.socialButton}>
             <Text style={styles.socialText}>G Google</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.socialButton}>
             <Text style={styles.socialText}> Apple</Text>
           </TouchableOpacity>
-        </View>
+        </div>
 
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Already have an account? </Text>

@@ -1,34 +1,51 @@
-import { Link, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+// components/Sidebar.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, useSegments } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const router = useRouter();
+  const segments = useSegments();
 
-  const isActive = (path: string) => pathname === path;
+  // Fix du type 'never'
+  const firstSegment = segments[0] as string | undefined;
+  const isAdmin =
+    firstSegment === "(admin)" || segments.some((s) => s === "(admin)");
 
   return (
     <View style={styles.sidebar}>
-      <Text style={styles.title}>Admin Panel</Text>
+      <Text style={styles.title}>SMART BUS</Text>
 
-      <Link href="/(admin)/dashboard" asChild>
-        <Pressable style={styles.link}>
-          <Text
-            style={isActive("/(admin)/dashboard") ? styles.active : styles.text}
+      {/* Menu Admin */}
+      {isAdmin && (
+        <View>
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => router.replace("./dashboard")}
           >
-            📊 Dashboard
-          </Text>
-        </Pressable>
-      </Link>
+            <Text style={styles.itemText}>📊 Dashboard Admin</Text>
+          </TouchableOpacity>
 
-      <Link href="/(admin)/users" asChild>
-        <Pressable style={styles.link}>
-          <Text
-            style={isActive("/(admin)/users") ? styles.active : styles.text}
+          {/* EL ZYEDA HNE: Bouton Users */}
+          <TouchableOpacity
+            style={styles.item}
+            onPress={() => router.replace("./users")}
           >
-            👤 Users
-          </Text>
-        </Pressable>
-      </Link>
+            <Text style={styles.itemText}>👥 Users</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Déconnexion */}
+      <TouchableOpacity
+        style={[styles.item, styles.logout]}
+        onPress={() => {
+          AsyncStorage.removeItem("userToken");
+          router.replace("/(auth)/signin");
+        }}
+      >
+        <Text style={styles.logoutText}>🚪 Déconnexion</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -36,25 +53,33 @@ export default function Sidebar() {
 const styles = StyleSheet.create({
   sidebar: {
     width: 250,
-    backgroundColor: "#111",
-    padding: 20,
+    backgroundColor: "#1e2937",
+    paddingTop: 60,
+    paddingHorizontal: 20,
     height: "100%",
   },
   title: {
-    color: "white",
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  link: {
-    marginBottom: 15,
-  },
-  text: {
-    color: "#aaa",
-    fontSize: 16,
-  },
-  active: {
-    color: "#4da6ff",
+    fontSize: 26,
     fontWeight: "bold",
-    fontSize: 16,
+    color: "#fff",
+    marginBottom: 50,
+  },
+  item: {
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: "#334155",
+  },
+  itemText: {
+    color: "#e2e8f0",
+    fontSize: 17,
+  },
+  logout: {
+    marginTop: "auto",
+    borderBottomWidth: 0,
+    paddingBottom: 30,
+  },
+  logoutText: {
+    color: "#ef4444",
+    fontSize: 17,
   },
 });
