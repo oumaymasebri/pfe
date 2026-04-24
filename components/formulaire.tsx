@@ -83,7 +83,7 @@ export default function Formulaire({onSubmit}: FormulaireProps) {
           onPress={handleLogin}
           disabled={isDisabled || !email || !password}
         >
-          <Text style={styles.buttonText}>Se connecter</Text>
+          <Text style={styles.buttonText}>Enregistrer</Text>
         </TouchableOpacity>
       </View>
     </View>

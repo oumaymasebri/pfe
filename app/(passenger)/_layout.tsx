@@ -22,17 +22,15 @@ export default function TabsLayout() {
         headerShown: false, // On cache le header par défaut
       }}
     >
-      {/* Onglet Accueil */}
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: "Accueil",
+          title: "Acceuil",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
-
       {/* Onglet Trajets */}
       <Tabs.Screen
         name="trajets"
@@ -74,6 +72,15 @@ export default function TabsLayout() {
           title: "Profil",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="parametres"
+        options={{
+          title: "Paramétres",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings" size={size} color={color} />
           ),
         }}
       />

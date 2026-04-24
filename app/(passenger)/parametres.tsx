@@ -39,8 +39,7 @@ const ParametresScreen = () => {
         {
           icon: "person-outline",
           title: "Informations personnelles",
-          onPress: () =>
-            Alert.alert("Informations personnelles", "À venir bientôt"),
+          onPress: () => router.push("/(passenger)/profile")
         },
         {
           icon: "lock-closed-outline",

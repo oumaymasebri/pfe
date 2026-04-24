@@ -375,13 +375,13 @@ const handleSaveProfile = async () => {
     {
       icon: "notifications-outline",
       title: "Notifications",
-      onPress: () => Alert.alert("Notifications"),
+      onPress: () => router.push("/(passenger)/alertes"),
       active: false,
     },
     {
       icon: "heart-outline",
       title: "Favoris",
-      onPress: () => Alert.alert("Favoris"),
+      onPress: () => router.push("/(passenger)/favoris"),
       active: false,
     },
     {
