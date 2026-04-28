@@ -1,85 +1,170 @@
-// components/Sidebar.tsx
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter, useSegments } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { DrawerContentScrollView } from "@react-navigation/drawer";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useDispatch } from "react-redux";
+import { logout } from "../redux/slices/userSlice";
 
-export default function Sidebar() {
+export default function Sidebar(props: any) {
   const router = useRouter();
-  const segments = useSegments();
+  const dispatch = useDispatch();
 
-  // Fix du type 'never'
-  const firstSegment = segments[0] as string | undefined;
-  const isAdmin =
-    firstSegment === "(admin)" || segments.some((s) => s === "(admin)");
+  // ✅ Function Déconnexion
+  const handleLogout = () => {
+    Alert.alert("Déconnexion", "Voulez-vous vraiment vous déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Déconnexion",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // 1. Update Redux
+            dispatch(logout());
+            // 2. Clear Storage
+            await AsyncStorage.clear();
+            // 3. Redirect lel Sign-in
+            router.replace("/(auth)/signin");
+          } catch (error) {
+            console.error("Erreur de déconnexion:", error);
+          }
+        },
+      },
+    ]);
+  };
+
+  // ✅ Composant Item lel Menu
+  const MenuItem = ({ icon, label, path, isLogout = false }: any) => (
+    <TouchableOpacity
+      style={[styles.menuItem, isLogout && styles.logoutItem]}
+      onPress={() => (isLogout ? handleLogout() : router.push(path))}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name={icon}
+        size={22}
+        color={isLogout ? "#ef4444" : "#94a3b8"} // A7mer fage3 lel logout
+      />
+      <Text style={[styles.menuText, isLogout && styles.logoutText]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.sidebar}>
-      <Text style={styles.title}>SMART BUS</Text>
-
-      {/* Menu Admin */}
-      {isAdmin && (
-        <View>
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => router.replace("./dashboard")}
-          >
-            <Text style={styles.itemText}>📊 Dashboard Admin</Text>
-          </TouchableOpacity>
-
-          {/* EL ZYEDA HNE: Bouton Users */}
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => router.replace("./users")}
-          >
-            <Text style={styles.itemText}>👥 Users</Text>
-          </TouchableOpacity>
+    <DrawerContentScrollView
+      {...props}
+      style={{ backgroundColor: "#0f172a" }} // Dark background kima el tsawra
+      contentContainerStyle={{ flex: 1 }}
+    >
+      {/* Header Sidebar */}
+      <View style={styles.header}>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logoText}>SB</Text>
         </View>
-      )}
+        <Text style={styles.brandName}>SmartBus Admin</Text>
+      </View>
 
-      {/* Déconnexion */}
-      <TouchableOpacity
-        style={[styles.item, styles.logout]}
-        onPress={() => {
-          AsyncStorage.removeItem("userToken");
-          router.replace("/(auth)/signin");
-        }}
-      >
-        <Text style={styles.logoutText}>🚪 Déconnexion</Text>
-      </TouchableOpacity>
-    </View>
+      {/* Menu List */}
+      <View style={styles.menuList}>
+        <MenuItem
+          icon="grid-outline"
+          label="Tableau de bord"
+          path="/(admin)/dashboard/dashboard"
+        />
+
+        <MenuItem
+          icon="bus-outline"
+          label="Gestion des Bus"
+          path="/(admin)/gestionbus/gestionbus"
+        />
+
+        <MenuItem
+          icon="map-outline"
+          label="Lignes et Stations"
+          path="/(admin)/lignes-stations"
+        />
+
+        <MenuItem
+          icon="people-outline"
+          label="Utilisateurs"
+          path="/(admin)/utilisateurs/users"
+        />
+
+        <View style={styles.separator} />
+
+        <MenuItem
+          icon="person-outline"
+          label="Mon Profil"
+          path="/(admin)/profile"
+        />
+        <MenuItem
+          icon="settings-outline"
+          label="Paramètres"
+          path="/(admin)/parametres"
+        />
+
+        <View style={styles.separator} />
+
+        {/* ✅ El bouton mte3 el Logout mrigel bel function handleLogout */}
+        <MenuItem icon="exit-outline" label="Déconnexion" isLogout={true} />
+      </View>
+    </DrawerContentScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  sidebar: {
-    width: 250,
-    backgroundColor: "#1e2937",
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    height: "100%",
+  header: {
+    padding: 30,
+    alignItems: "center",
+    marginBottom: 10,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 50,
+  logoCircle: {
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
+    backgroundColor: "#3b82f6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    // Shadow sghira bech yben kima el design
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
-  item: {
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: "#334155",
+  logoText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
+  brandName: { color: "#fff", fontSize: 18, fontWeight: "bold" },
+
+  menuList: { flex: 1, paddingHorizontal: 20 },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 5,
   },
-  itemText: {
-    color: "#e2e8f0",
-    fontSize: 17,
+  menuText: {
+    color: "#94a3b8",
+    marginLeft: 15,
+    fontSize: 16,
+    fontWeight: "500",
   },
-  logout: {
-    marginTop: "auto",
-    borderBottomWidth: 0,
-    paddingBottom: 30,
+
+  logoutItem: {
+    marginTop: 10,
   },
   logoutText: {
-    color: "#ef4444",
-    fontSize: 17,
+    color: "#ef4444", // Couleur rouge kima el tsawra
+    fontWeight: "bold",
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: "#1e293b",
+    marginVertical: 15,
+    opacity: 0.5,
   },
 });

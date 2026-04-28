@@ -1,5 +1,7 @@
+// app/(admin)/utilisateurs.tsx
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { DrawerActions } from "@react-navigation/native";
+import { useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,7 +20,6 @@ import {
 import { db } from "@/configFirebase";
 import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
 
-// Type utilisateur pour corriger les erreurs "implicitly has any type"
 interface User {
   id: string;
   name: string;
@@ -31,6 +32,8 @@ const isWeb = Platform.OS === "web";
 
 export default function UserManagement() {
   const router = useRouter();
+  const navigation = useNavigation(); // Pour ouvrir le drawer
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -73,6 +76,15 @@ export default function UserManagement() {
 
   return (
     <ScrollView style={styles.container as ViewStyle}>
+      {/* Bouton Menu (comme dans le Dashboard) */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+        >
+          <Feather name="menu" size={28} color="#0f172a" />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.header as ViewStyle}>
         <View>
           <Text style={styles.title as TextStyle}>Gestion Utilisateurs</Text>
@@ -82,7 +94,7 @@ export default function UserManagement() {
         </View>
         <TouchableOpacity
           style={styles.addButton as any}
-          onPress={() => router.push("/addUser")}
+          onPress={() => router.push("/(admin)/utilisateurs/addUser")}
         >
           <Feather name="user-plus" size={18} color="#fff" />
           <Text style={styles.addButtonText as TextStyle}>Nouveau</Text>
@@ -156,8 +168,8 @@ export default function UserManagement() {
                     <TouchableOpacity
                       style={styles.editButton as any}
                       onPress={() =>
-                        router.push(`/(admin)/editUser/${user.id}`)
-                      } // Redirection avec l'ID
+                        router.push(`/(admin)/utilisateurs/editUser/${user.id}`)
+                      }
                     >
                       <Feather name="edit-2" size={16} color="#334155" />
                       <Text style={styles.editButtonText as TextStyle}>
@@ -182,11 +194,19 @@ export default function UserManagement() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc", padding: isWeb ? 40 : 20 },
+
+  topBar: {
+    paddingHorizontal: isWeb ? 40 : 20,
+    paddingTop: 15,
+    marginBottom: 10,
+  },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 30,
+    paddingHorizontal: isWeb ? 40 : 20,
   },
   title: { fontSize: 28, fontWeight: "800", color: "#0f172a" },
   subtitle: { color: "#64748b", fontSize: 16 },
@@ -199,6 +219,7 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { cursor: "pointer" } as any }),
   },
   addButtonText: { color: "#fff", fontWeight: "bold" },
+
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -209,10 +230,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    marginHorizontal: isWeb ? 40 : 20,
   },
   searchInput: { flex: 1, marginLeft: 10 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 20 },
-  // Correction de l'erreur width calc() pour TypeScript
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 20,
+    paddingHorizontal: isWeb ? 40 : 20,
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: 24,

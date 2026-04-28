@@ -1,4 +1,3 @@
- 
 // app/auth/signin.tsx
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -58,7 +57,8 @@ const SignInScreen = () => {
       const info = JSON.parse(jsonValue || "{}");
       setEmail(info?.email || "");
       setPassword(info?.password || "");
-      setKeepLoggedIn(info?.keepLoggedIn || false);};
+      setKeepLoggedIn(info?.keepLoggedIn || false);
+    };
     loadInfo();
   }, []);
 
@@ -103,7 +103,7 @@ const SignInScreen = () => {
       const profile = await getDoc(doc(db, "users", userCredential.user.uid));
 
       const user = userCredential.user;
-      if (profile.exists()) {        
+      if (profile.exists()) {
         dispatch(
           setUser({
             user: {
@@ -119,9 +119,9 @@ const SignInScreen = () => {
 
         alert("Connexion réussie ✅Bienvenue dans Smart Urban Bus !");
         if (profile.data().role === "admin") {
-          router.push("/(admin)/dashboard");
+          router.replace("/(admin)/dashboard/dashboard");
         } else {
-          router.push("/(passenger)/home");
+          router.replace("/(passenger)/home");
         }
       }
     } catch (error: any) {
@@ -189,7 +189,7 @@ const SignInScreen = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={[styles.title,{marginTop: 25}]}>Welcome Back</Text>
+          <Text style={[styles.title, { marginTop: 25 }]}>Welcome Back</Text>
           <Text style={styles.subtitle}>
             Please enter your details to sign in
           </Text>
@@ -330,7 +330,6 @@ const styles = StyleSheet.create({
   },
 
   title: {
-
     fontSize: 28,
     fontWeight: "bold",
     color: "#1a1a1a",

@@ -1,45 +1,51 @@
-import { db } from "@/configFirebase";
+/* eslint-disable react/no-unescaped-entities */
+import { db } from "@/configFirebase"; // Assure-toi que auth est exporté de ton configFirebase
 import { Feather } from "@expo/vector-icons";
-import { Picker } from "@react-native-picker/picker"; // Import du Picker
+import { Picker } from "@react-native-picker/picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TextStyle,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TextStyle,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function EditUser() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
+  // États
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
+  // Formulaire
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("client"); // Valeur par défaut
-  const [status, setStatus] = useState("actif"); // Valeur par défaut
+  const [role, setRole] = useState("client");
+  const [status, setStatus] = useState("actif");
 
+  // 1. Récupération des données
   useEffect(() => {
     const fetchUser = async () => {
+      if (!id) return;
       try {
         const userDoc = await getDoc(doc(db, "users", id as string));
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setName(data.fullName || "");
+          setName(data.fullName || data.name || "");
           setEmail(data.email || "");
           setRole(data.role || "client");
           setStatus(data.status || "actif");
         }
       } catch (e) {
-        console.error(e);
+        console.error("Erreur lors du chargement :", e);
       } finally {
         setLoading(false);
       }
@@ -47,114 +53,65 @@ export default function EditUser() {
     fetchUser();
   }, [id]);
 
-  /*const handleUpdate = async () => {
+  // 2. Validation simple
+  const validateForm = () => {
+    if (!name.trim() || !email.trim()) {
+      const msg = "Le nom et l'email sont obligatoires.";
+      Platform.OS === "web" ? alert(msg) : Alert.alert("Erreur", msg);
+      return false;
+    }
+    return true;
+  };
+
+  // 3. Mise à jour des données (Logique corrigée)
+  const handleUpdate = async () => {
+    if (!validateForm()) return;
+
     setUpdating(true);
     try {
       await updateDoc(doc(db, "users", id as string), {
-        name,
-        email,
-        role,
-        status,
+        fullName: name, // On utilise fullName pour rester cohérent avec ton useEffect
+        email: email.toLowerCase().trim(),
+        role: role,
+        status: status,
       });
+
+      const successMsg = "Utilisateur mis à jour !";
+      if (Platform.OS === "web") {
+        alert(successMsg);
+      } else {
+        Alert.alert("Succès ✅", successMsg);
+      }
+
       router.back();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      const errorMsg = "Impossible de mettre à jour le profil.";
+      Platform.OS === "web"
+        ? alert(errorMsg)
+        : Alert.alert("Erreur ❌", errorMsg);
     } finally {
       setUpdating(false);
     }
-  };*/
-  const handleSaveProfile = async () => {
-    if (!validateProfile()) return;
-    setSavingProfile(true);
-  
-    const currentUser = auth.currentUser;
-  
-    if (!currentUser || !currentUser.email) {
-      Alert.alert("❌ Erreur", "Utilisateur non connecté.");
-      setSavingProfile(false);
-      return;
-    }
-  
-    try {
-      const emailChanged = profileForm.email.trim() !== currentUser.email.trim();
-      // ── Si l'email a changé → ré-auth obligatoire ──
-      if (emailChanged) {
-        if (!profileForm.currentPassword) {
-          setProfileErrors((e: any) => ({
-            ...e,
-            currentPassword: "Mot de passe requis pour changer l'email",
-          }));
-          setSavingProfile(false);
-          return;
-        }
-  
-        const credential = EmailAuthProvider.credential(
-          currentUser.email,
-          profileForm.currentPassword
-        );
-        await reauthenticateWithCredential(currentUser, credential);
-        await verifyBeforeUpdateEmail(currentUser, profileForm.email.trim());
-        
-      }
-  
-      // ── Mettre à jour Firestore ──
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        fullName: profileForm.name,
-        phoneNumber: profileForm.phone,
-        ...(emailChanged && { email: profileForm.email.trim() }),
-      });
-  
-      setProfileForm((p) => ({ ...p, currentPassword: "" }));
-      setEditOpen(false);
-  
-      if (emailChanged) {
-        Alert.alert(
-          "📧 Vérification requise",
-          `Un email de confirmation a été envoyé à ${profileForm.email}. Validez-le pour appliquer le changement.`
-        );
-      } else {
-        Alert.alert("✅ Succès", "Profil mis à jour avec succès !");
-      }
-  
-    } catch (error: any) {
-      switch (error.code) {
-        case "auth/wrong-password":
-        case "auth/invalid-credential":
-          setProfileErrors((e: any) => ({
-            ...e,
-            currentPassword: "Mot de passe incorrect ❌",
-          }));
-          break;
-        case "auth/email-already-in-use":
-          setProfileErrors((e: any) => ({
-            ...e,
-            email: "Cet email est déjà utilisé",
-          }));
-          break;
-        case "auth/requires-recent-login":
-          Alert.alert("❌ Session expirée", "Veuillez vous reconnecter.");
-          break;
-        default:
-          Alert.alert("❌ Erreur", error.message || "Une erreur est survenue.");
-      }
-    } finally {
-      setSavingProfile(false);
-    }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <ActivityIndicator style={{ flex: 1 }} size="large" color="#2563eb" />
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
     );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.modalContent}>
+        {/* HEADER */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title as TextStyle}>Édition</Text>
             <Text style={styles.subtitle as TextStyle}>
-              Informations du profil utilisateur.
+              Modifier les accès de l'utilisateur.
             </Text>
           </View>
           <TouchableOpacity onPress={() => router.back()}>
@@ -162,20 +119,32 @@ export default function EditUser() {
           </TouchableOpacity>
         </View>
 
+        {/* CHAMPS DE SAISIE */}
         <Text style={styles.inputLabel as TextStyle}>NOM COMPLET</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Ex: Jean Dupont"
+        />
 
         <Text style={styles.inputLabel as TextStyle}>ADRESSE EMAIL</Text>
-        <TextInput style={styles.input} value={email} onChangeText={setEmail} />
+        <TextInput
+          style={styles.input}
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
+        {/* SELECTEURS (PICKERS) */}
         <View style={styles.row}>
-          {/* Liste pour le RÔLE */}
           <View style={{ flex: 1, marginRight: 10 }}>
             <Text style={styles.inputLabel as TextStyle}>RÔLE</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={role}
-                onValueChange={(itemValue) => setRole(itemValue)}
+                onValueChange={(val) => setRole(val)}
                 style={styles.picker}
               >
                 <Picker.Item label="Admin" value="admin" />
@@ -184,13 +153,12 @@ export default function EditUser() {
             </View>
           </View>
 
-          {/* Liste pour le STATUT */}
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.inputLabel as TextStyle}>STATUT</Text>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={status}
-                onValueChange={(itemValue) => setStatus(itemValue)}
+                onValueChange={(val) => setStatus(val)}
                 style={styles.picker}
               >
                 <Picker.Item label="Actif" value="actif" />
@@ -200,8 +168,9 @@ export default function EditUser() {
           </View>
         </View>
 
+        {/* BOUTON DE SAUVEGARDE */}
         <TouchableOpacity
-          style={styles.updateButton}
+          style={[styles.updateButton, updating && { opacity: 0.7 }]}
           onPress={handleUpdate}
           disabled={updating}
         >
@@ -209,7 +178,7 @@ export default function EditUser() {
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.updateButtonText as TextStyle}>
-              Mettre à jour
+              Sauvegarder les modifications
             </Text>
           )}
         </TouchableOpacity>
@@ -231,48 +200,52 @@ const styles = StyleSheet.create({
     width: Platform.OS === "web" ? 500 : "100%",
     borderRadius: 30,
     padding: 30,
+    // Ombre pour le web et mobile
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 30,
   },
-  title: { fontSize: 32, fontWeight: "900", color: "#2563eb" },
-  subtitle: { color: "#64748b", fontSize: 16, fontWeight: "600" },
+  title: { fontSize: 28, fontWeight: "900", color: "#2563eb" },
+  subtitle: { color: "#64748b", fontSize: 14, fontWeight: "600" },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     color: "#94a3b8",
     marginBottom: 8,
     marginTop: 20,
+    letterSpacing: 1,
   },
   input: {
     backgroundColor: "#f8fafc",
-    height: 60,
+    height: 55,
     borderRadius: 15,
     paddingHorizontal: 20,
     fontSize: 16,
-    fontWeight: "600",
     color: "#1e293b",
     borderWidth: 1,
     borderColor: "#f1f5f9",
   },
   row: { flexDirection: "row", justifyContent: "space-between" },
-  // Style pour encadrer le Picker comme tes Inputs
   pickerContainer: {
     backgroundColor: "#f8fafc",
     borderRadius: 15,
     borderWidth: 1,
     borderColor: "#f1f5f9",
-    overflow: "hidden", // Pour que l'arrondi fonctionne sur Android
-    height: 60,
+    overflow: "hidden",
+    height: 55,
     justifyContent: "center",
   },
   picker: {
-    height: 60,
+    height: 55,
     width: "100%",
     color: "#1e293b",
-    fontWeight: "600",
   },
   updateButton: {
     backgroundColor: "#2563eb",
@@ -282,5 +255,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 40,
   },
-  updateButtonText: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  updateButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });
