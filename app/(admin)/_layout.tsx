@@ -1,25 +1,41 @@
-import Sidebar from "@/components/Sidebar";
-import { Slot } from "expo-router";
-import { StyleSheet, View } from "react-native";
+// app/(admin)/_layout.tsx
+import Sidebar from "@/components/Sidebar"; // ← Chemin correct
+import { Drawer } from "expo-router/drawer";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-export default function Layout() {
+export default function AdminLayout() {
   return (
-    <View style={styles.container}>
-      <Sidebar />
-      <View style={styles.content}>
-        <Slot />
-      </View>
-    </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      
+      <Drawer
+        drawerContent={(props) => <Sidebar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          drawerType: "front",
+          drawerStyle: {
+            width: 300, // Largeur du sidebar
+            backgroundColor: "#0f172a",
+          },
+        }}
+      >
+        {/* Masquer les items par défaut du drawer */}
+        <Drawer.Screen
+          name="dashboard/dashboard"
+          options={{ drawerItemStyle: { display: "none" } }}
+        />
+        <Drawer.Screen
+          name="gestionbus/gestionbus"
+          options={{ drawerItemStyle: { display: "none" } }}
+        />
+        <Drawer.Screen
+          name="utilisateurs/users"
+          options={{ drawerItemStyle: { display: "none" } }}
+        />
+        <Drawer.Screen
+          name="lignes-stations/ligne-station"
+          options={{ drawerItemStyle: { display: "none" } }}
+        />
+      </Drawer>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-});
