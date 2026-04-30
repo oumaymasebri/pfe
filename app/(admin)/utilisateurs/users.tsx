@@ -35,6 +35,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
+import { deleteUser } from "@/redux/actions/deleteUser";
 
 interface User {
   id: string;
@@ -117,7 +118,9 @@ export default function UserManagement() {
   const handleDelete = async (id: string, name: string) => {
     if (isWeb && !window.confirm(`Supprimer ${name} ?`)) return;
     try {
+      
       await deleteDoc(doc(db, "users", id));
+      await deleteUser(id)
       setUsers(users.filter((u) => u.id !== id));
     } catch (e) {
       console.error(e);

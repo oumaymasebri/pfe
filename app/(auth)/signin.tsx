@@ -95,7 +95,7 @@ const SignInScreen = () => {
         auth,
         email,
         password,
-      );
+      );      
       await AsyncStorage.setItem(
         "userToken",
         userCredential._tokenResponse.idToken,
