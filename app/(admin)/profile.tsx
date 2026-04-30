@@ -117,11 +117,20 @@ const ProfileScreen = () => {
         style: "destructive",
         onPress: async () => {
           try {
+            // 1. Nettoyage du state Redux / Zustand / Context
             dispatch(logout());
+
+            // 2. Nettoyage du stockage (fonctionne sur mobile + web)
             await AsyncStorage.clear();
+
+            // 3. Navigation avec reset pour éviter de pouvoir revenir en arrière
             router.replace("/(auth)/signin");
+
+            // Optionnel : reset complet du router (recommandé pour un vrai logout)
+          // router.dismissAll(); // ou router.reset() selon ta version
           } catch (error) {
-            console.error("Erreur déconnexion:", error);
+            console.error("Erreur lors de la déconnexion:", error);
+            // Optionnel : afficher un message d'erreur à l'utilisateur
           }
         },
       },

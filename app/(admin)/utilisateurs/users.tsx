@@ -1,8 +1,9 @@
+/* eslint-disable react/no-unescaped-entities */
 /* eslint-disable no-unused-expressions */
 // app/(admin)/utilisateurs.tsx
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router";
+import { useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -130,7 +131,7 @@ export default function UserManagement() {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
-        data.password
+        data.password,
       );
       const user = userCredential.user;
       await setDoc(doc(db, "users", user.uid), {
@@ -267,9 +268,7 @@ export default function UserManagement() {
       ) : (
         <View style={styles.grid as ViewStyle}>
           {users
-            .filter((u) =>
-              u.name.toLowerCase().includes(search.toLowerCase())
-            )
+            .filter((u) => u.name.toLowerCase().includes(search.toLowerCase()))
             .map((user) => {
               const roleColors = getRoleColors(user.role);
               return (
@@ -293,16 +292,17 @@ export default function UserManagement() {
                       <Text style={styles.label as TextStyle}>RÔLE</Text>
                       <View style={styles.roleBadge as ViewStyle}>
                         <View
-                          style={[
-                            styles.dot,
-                            { backgroundColor: roleColors.dot },
-                          ] as any}
+                          style={
+                            [
+                              styles.dot,
+                              { backgroundColor: roleColors.dot },
+                            ] as any
+                          }
                         />
                         <Text
-                          style={[
-                            styles.roleText,
-                            { color: roleColors.text },
-                          ] as any}
+                          style={
+                            [styles.roleText, { color: roleColors.text }] as any
+                          }
                         >
                           {user.role}
                         </Text>
@@ -393,7 +393,9 @@ export default function UserManagement() {
             {/* Header */}
             <View style={modalStyles.sheetHeader}>
               <View>
-                <Text style={modalStyles.sheetTitle}>Modifier l'utilisateur</Text>
+                <Text style={modalStyles.sheetTitle}>
+                  Modifier l'utilisateur
+                </Text>
                 <Text style={modalStyles.sheetSubtitle}>
                   Mettre à jour les accès et le profil
                 </Text>
@@ -410,7 +412,9 @@ export default function UserManagement() {
             {name ? (
               <View style={modalStyles.userCard}>
                 <View style={modalStyles.avatarCircle}>
-                  <Text style={modalStyles.avatarText}>{getInitials(name)}</Text>
+                  <Text style={modalStyles.avatarText}>
+                    {getInitials(name)}
+                  </Text>
                 </View>
                 <View>
                   <Text style={modalStyles.userCardName}>{name}</Text>
@@ -477,10 +481,7 @@ export default function UserManagement() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[
-                    modalStyles.saveBtn,
-                    updating && { opacity: 0.7 },
-                  ]}
+                  style={[modalStyles.saveBtn, updating && { opacity: 0.7 }]}
                   onPress={handleUpdate}
                   disabled={updating}
                 >

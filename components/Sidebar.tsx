@@ -83,7 +83,7 @@ export default function Sidebar(props: any) {
         <MenuItem
           icon="map-outline"
           label="Lignes et Stations"
-          path="/(admin)/lignes-stations"
+          path="/(admin)/lignes-stations/lignes-stations"
         />
 
         <MenuItem
