@@ -1,7 +1,7 @@
 import { auth, db } from "@/configFirebase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -55,12 +55,7 @@ const InputField: React.FC<InputFieldProps> = ({
 }) => (
   <View style={fieldStyles.wrapper}>
     <Text style={fieldStyles.label}>{label}</Text>
-    <View
-      style={[
-        fieldStyles.inputRow,
-        !!error && fieldStyles.inputError,
-      ]}
-    >
+    <View style={[fieldStyles.inputRow, !!error && fieldStyles.inputError]}>
       <Ionicons
         name={icon as any}
         size={20}
@@ -131,6 +126,7 @@ const fieldStyles = StyleSheet.create({
 
 // ─── Écran principal ───────────────────────────────────────────────────────
 const ProfileScreen = () => {
+  const router = useRouter();
   const dispatch = useDispatch();
   const user = useSelector((state: any) => state.user.user);
 
@@ -171,20 +167,42 @@ const ProfileScreen = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+ const handleLogout = () => {
+  Alert.alert(
+    "Déconnexion",
+    "Êtes-vous sûr de vouloir vous déconnecter ?",
+    [
       { text: "Annuler", style: "cancel" },
       {
         text: "Déconnexion",
         style: "destructive",
-        onPress: () => {
-          dispatch(logout());
-          AsyncStorage.removeItem("userToken");
-          router.replace("/(auth)/signin");
+        onPress: async () => {
+          try {
+            // 1. مسح الـ Redux state
+            dispatch(logout());
+
+            // 2. مسح البيانات المخزنة
+            await AsyncStorage.removeItem("userToken");
+            // أضف كل المفاتيح اللي تستعملها
+            await AsyncStorage.multiRemove([
+              "userToken",
+              "userData",
+              "refreshToken",
+              // أي مفتاح آخر تستعمله
+            ]);
+
+            // 3. التنقل لصفحة الدخول
+            router.replace("/(auth)/signin");
+
+          } catch (error) {
+            console.error("Logout error:", error);
+            Alert.alert("Erreur", "Problème lors de la déconnexion");
+          }
         },
       },
-    ]);
-  };
+    ]
+  );
+};
 
   // ─── Validation profil ─────────────────────────────────────────────────────
   const validateProfile = (): boolean => {
@@ -221,132 +239,137 @@ const ProfileScreen = () => {
     return Object.keys(errors).length === 0;
   };
 
-const handleSaveProfile = async () => {
-  if (!validateProfile()) return;
-  setSavingProfile(true);
+  const handleSaveProfile = async () => {
+    if (!validateProfile()) return;
+    setSavingProfile(true);
 
-  const currentUser = auth.currentUser;
-
-  if (!currentUser || !currentUser.email) {
-    Alert.alert("❌ Erreur", "Utilisateur non connecté.");
-    setSavingProfile(false);
-    return;
-  }
-
-  try {
-    const emailChanged = profileForm.email.trim() !== currentUser.email.trim();
-    // ── Si l'email a changé → ré-auth obligatoire ──
-    if (emailChanged) {
-      if (!profileForm.currentPassword) {
-        setProfileErrors((e: any) => ({
-          ...e,
-          currentPassword: "Mot de passe requis pour changer l'email",
-        }));
-        setSavingProfile(false);
-        return;
-      }
-
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        profileForm.currentPassword
-      );
-      await reauthenticateWithCredential(currentUser, credential);
-      await verifyBeforeUpdateEmail(currentUser, profileForm.email.trim());
-      
-    }
-
-    // ── Mettre à jour Firestore ──
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      fullName: profileForm.name,
-      phoneNumber: profileForm.phone,
-      ...(emailChanged && { email: profileForm.email.trim() }),
-    });
-
-    setProfileForm((p) => ({ ...p, currentPassword: "" }));
-    setEditOpen(false);
-
-    if (emailChanged) {
-      Alert.alert(
-        "📧 Vérification requise",
-        `Un email de confirmation a été envoyé à ${profileForm.email}. Validez-le pour appliquer le changement.`
-      );
-    } else {
-      Alert.alert("✅ Succès", "Profil mis à jour avec succès !");
-    }
-
-  } catch (error: any) {
-    switch (error.code) {
-      case "auth/wrong-password":
-      case "auth/invalid-credential":
-        setProfileErrors((e: any) => ({
-          ...e,
-          currentPassword: "Mot de passe incorrect ❌",
-        }));
-        break;
-      case "auth/email-already-in-use":
-        setProfileErrors((e: any) => ({
-          ...e,
-          email: "Cet email est déjà utilisé",
-        }));
-        break;
-      case "auth/requires-recent-login":
-        Alert.alert("❌ Session expirée", "Veuillez vous reconnecter.");
-        break;
-      default:
-        Alert.alert("❌ Erreur", error.message || "Une erreur est survenue.");
-    }
-  } finally {
-    setSavingProfile(false);
-  }
-};
-  const handleSavePassword = async () => {
-  if (!validatePassword()) return;
-  setSavingPassword(true);
-  try {
     const currentUser = auth.currentUser;
 
     if (!currentUser || !currentUser.email) {
       Alert.alert("❌ Erreur", "Utilisateur non connecté.");
+      setSavingProfile(false);
       return;
     }
 
-    // Ré-authentifier avec le mot de passe actuel
-    const credential = EmailAuthProvider.credential(
-      currentUser.email,
-      passwordForm.currentPassword
-    );
-    await reauthenticateWithCredential(currentUser, credential);
+    try {
+      const emailChanged =
+        profileForm.email.trim() !== currentUser.email.trim();
+      // ── Si l'email a changé → ré-auth obligatoire ──
+      if (emailChanged) {
+        if (!profileForm.currentPassword) {
+          setProfileErrors((e: any) => ({
+            ...e,
+            currentPassword: "Mot de passe requis pour changer l'email",
+          }));
+          setSavingProfile(false);
+          return;
+        }
 
-    await updatePassword(currentUser, passwordForm.newPassword);
+        const credential = EmailAuthProvider.credential(
+          currentUser.email,
+          profileForm.currentPassword,
+        );
+        await reauthenticateWithCredential(currentUser, credential);
+        await verifyBeforeUpdateEmail(currentUser, profileForm.email.trim());
+      }
 
-    Alert.alert("✅ Succès", "Mot de passe modifié avec succès !");
-    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setPasswordOpen(false);
-    AsyncStorage.removeItem("userToken");
-    router.replace("/(auth)/signin");
+      // ── Mettre à jour Firestore ──
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        fullName: profileForm.name,
+        phoneNumber: profileForm.phone,
+        ...(emailChanged && { email: profileForm.email.trim() }),
+      });
 
-  } catch (error: any) {
-    switch (error.code) {
-      case "auth/wrong-password":
-      case "auth/invalid-credential":
-        Alert.alert("❌ Erreur", "Le mot de passe actuel est incorrect.");
-        break;
-      case "auth/too-many-requests":
-        Alert.alert("❌ Erreur", "Trop de tentatives. Réessayez plus tard.");
-        break;
-      case "auth/requires-recent-login":
-        Alert.alert("❌ Session expirée", "Veuillez vous reconnecter et réessayer.");
-        break;
-      case "auth/network-request-failed":
-        Alert.alert("❌ Erreur réseau", "Vérifiez votre connexion internet.");
-        break;
-      default:
-        Alert.alert("❌ Erreur", error.message || "Une erreur est survenue.");
+      setProfileForm((p) => ({ ...p, currentPassword: "" }));
+      setEditOpen(false);
+
+      if (emailChanged) {
+        Alert.alert(
+          "📧 Vérification requise",
+          `Un email de confirmation a été envoyé à ${profileForm.email}. Validez-le pour appliquer le changement.`,
+        );
+      } else {
+        Alert.alert("✅ Succès", "Profil mis à jour avec succès !");
+      }
+    } catch (error: any) {
+      switch (error.code) {
+        case "auth/wrong-password":
+        case "auth/invalid-credential":
+          setProfileErrors((e: any) => ({
+            ...e,
+            currentPassword: "Mot de passe incorrect ❌",
+          }));
+          break;
+        case "auth/email-already-in-use":
+          setProfileErrors((e: any) => ({
+            ...e,
+            email: "Cet email est déjà utilisé",
+          }));
+          break;
+        case "auth/requires-recent-login":
+          Alert.alert("❌ Session expirée", "Veuillez vous reconnecter.");
+          break;
+        default:
+          Alert.alert("❌ Erreur", error.message || "Une erreur est survenue.");
+      }
+    } finally {
+      setSavingProfile(false);
     }
-  } finally {
-    setSavingPassword(false);
-  }
-};
+  };
+  const handleSavePassword = async () => {
+    if (!validatePassword()) return;
+    setSavingPassword(true);
+    try {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser || !currentUser.email) {
+        Alert.alert("❌ Erreur", "Utilisateur non connecté.");
+        return;
+      }
+
+      // Ré-authentifier avec le mot de passe actuel
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        passwordForm.currentPassword,
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+
+      await updatePassword(currentUser, passwordForm.newPassword);
+
+      Alert.alert("✅ Succès", "Mot de passe modifié avec succès !");
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordOpen(false);
+      AsyncStorage.removeItem("userToken");
+      router.replace("/(auth)/signin");
+    } catch (error: any) {
+      switch (error.code) {
+        case "auth/wrong-password":
+        case "auth/invalid-credential":
+          Alert.alert("❌ Erreur", "Le mot de passe actuel est incorrect.");
+          break;
+        case "auth/too-many-requests":
+          Alert.alert("❌ Erreur", "Trop de tentatives. Réessayez plus tard.");
+          break;
+        case "auth/requires-recent-login":
+          Alert.alert(
+            "❌ Session expirée",
+            "Veuillez vous reconnecter et réessayer.",
+          );
+          break;
+        case "auth/network-request-failed":
+          Alert.alert("❌ Erreur réseau", "Vérifiez votre connexion internet.");
+          break;
+        default:
+          Alert.alert("❌ Erreur", error.message || "Une erreur est survenue.");
+      }
+    } finally {
+      setSavingPassword(false);
+    }
+  };
   const getPasswordStrength = (pwd: string) => {
     if (!pwd) return { level: 0, label: "", color: "#E0E0E0" };
     let score = 0;
@@ -409,6 +432,14 @@ const handleSaveProfile = async () => {
         >
           {/* ── En-tête avec photo de profil ── */}
           <View style={styles.header}>
+            {/* ←←← FLÈCHE DE RETOUR ←←← */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.push("/(admin)/dashboard/dashboard")}
+            >
+              <Ionicons name="arrow-back" size={28} color="#333" />
+            </TouchableOpacity>
+
             <View style={styles.avatarContainer}>
               {profileData.avatar ? (
                 <Image
@@ -430,6 +461,7 @@ const handleSaveProfile = async () => {
                 <Ionicons name="camera" size={18} color="#fff" />
               </TouchableOpacity>
             </View>
+
             <Text style={styles.userName}>{profileData.name}</Text>
             <Text style={styles.userEmail}>{profileData.email}</Text>
             <Text style={styles.userPhone}>{profileData.phoneNumber}</Text>
@@ -520,7 +552,9 @@ const handleSaveProfile = async () => {
                     <InputField
                       label="Mot de passe actuel (requis pour changer l'email)"
                       value={profileForm.currentPassword}
-                      onChangeText={(t) => setProfileForm((p) => ({ ...p, currentPassword: t }))}
+                      onChangeText={(t) =>
+                        setProfileForm((p) => ({ ...p, currentPassword: t }))
+                      }
                       placeholder="Confirmez votre identité"
                       icon="lock-closed-outline"
                       secureTextEntry={!showCurrentProfile}
@@ -652,17 +686,12 @@ const handleSaveProfile = async () => {
                       ].map((r, i) => (
                         <View key={i} style={styles.ruleRow}>
                           <Ionicons
-                            name={
-                              r.ok ? "checkmark-circle" : "ellipse-outline"
-                            }
+                            name={r.ok ? "checkmark-circle" : "ellipse-outline"}
                             size={15}
                             color={r.ok ? "#34C759" : "#C0C0C0"}
                           />
                           <Text
-                            style={[
-                              styles.ruleText,
-                              r.ok && styles.ruleTextOk,
-                            ]}
+                            style={[styles.ruleText, r.ok && styles.ruleTextOk]}
                           >
                             {r.text}
                           </Text>
@@ -737,6 +766,20 @@ const handleSaveProfile = async () => {
 };
 
 const styles = StyleSheet.create({
+  backButton: {
+    position: "absolute",
+    top: 20,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 50,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   container: {
     flex: 1,
     backgroundColor: "#F8F9FA",

@@ -241,7 +241,7 @@ export default function GestionBus() {
         {loading ? (
           <ActivityIndicator
             size="large"
-            color="#2563eb"
+            color="#6b46c1"
             style={{ marginVertical: 50 }}
           />
         ) : isMobile ? (
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: "800", color: "#0f172a" },
   subtitle: { fontSize: 16, color: "#64748b" },
   addButton: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#6b46c1",
     flexDirection: "row",
     padding: 15,
     borderRadius: 12,
@@ -615,7 +615,7 @@ const modalStyles = StyleSheet.create({
   },
   actionRow: { marginTop: 20 },
   saveBtn: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#6b46c1",
     height: 55,
     borderRadius: 12,
     justifyContent: "center",

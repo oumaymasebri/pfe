@@ -86,6 +86,13 @@ export default function Sidebar(props: any) {
           path="/(admin)/lignes-stations/lignes-stations"
         />
 
+        {/* ←←← AJOUT ICI ←←← */}
+        <MenuItem
+          icon="alert-circle-outline"
+          label="Alertes"
+          path="/(admin)/alertes/alertes"
+        />
+
         <MenuItem
           icon="people-outline"
           label="Utilisateurs"
@@ -107,7 +114,6 @@ export default function Sidebar(props: any) {
 
         <View style={styles.separator} />
 
-        {/* ✅ El bouton mte3 el Logout mrigel bel function handleLogout */}
         <MenuItem icon="exit-outline" label="Déconnexion" isLogout={true} />
       </View>
     </DrawerContentScrollView>

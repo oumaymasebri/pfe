@@ -1,60 +1,98 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+import NativeMap from "@/components/NativeMap.web";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
 import { useNavigation } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
-// Firebase Logic[cite: 1]
+// Firebase
 import { db } from "@/configFirebase";
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  updateDoc,
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    getDocs,
+    updateDoc,
 } from "firebase/firestore";
+
+// ==================== HELPERS ====================
+const formatDuree = (minutes: number): string => {
+  if (!minutes) return "—";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  return `${m}min`;
+};
+
+const addMinutesToTime = (time: string, minutesToAdd: number): string => {
+  if (!time || !minutesToAdd) return "—";
+  const [hours, minutes] = time.split(":").map(Number);
+  let total = hours * 60 + minutes + minutesToAdd;
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`;
+};
 
 export default function LignesStationsPage() {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState("Lignes");
+
+  const [activeTab, setActiveTab] = useState<"Lignes" | "Stations">("Lignes");
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any[]>([]);
+  const [lignes, setLignes] = useState<any[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
   const [search, setSearch] = useState("");
 
-  // Modal States[cite: 1]
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
+
+  // Modal States
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [currentType, setCurrentType] = useState<"Lignes" | "Stations">(
+    "Lignes",
+  );
 
-  // Champs Formulaire[cite: 1]
+  // Lignes Fields
   const [code, setCode] = useState("");
   const [nom, setNom] = useState("");
   const [depart, setDepart] = useState("");
   const [destination, setDestination] = useState("");
+  const [distance, setDistance] = useState("");
+  const [duree, setDuree] = useState("");
+  const [heureDepart, setHeureDepart] = useState("");
+  const [nombreStations, setNombreStations] = useState("");
+  const [busActifs, setBusActifs] = useState("");
+  const [etat, setEtat] = useState<"ACTIVE" | "RETARD" | "HORS_SERVICE">(
+    "ACTIVE",
+  );
+
+  // Stations Fields
   const [localisation, setLocalisation] = useState("");
-  const [zone, setZone] = useState("");
+  const [ligneAssociee, setLigneAssociee] = useState("");
+  const [horairePassage, setHorairePassage] = useState("");
+  const [etatStation, setEtatStation] = useState<
+    "ACTIVE" | "BUSY" | "MAINTENANCE"
+  >("ACTIVE");
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const colName = activeTab === "Lignes" ? "lignes" : "stations";
-      const querySnapshot = await getDocs(collection(db, colName));
-      const list: any[] = [];
-      querySnapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      setData(list);
+      const [lignesSnap, stationsSnap] = await Promise.all([
+        getDocs(collection(db, "lignes")),
+        getDocs(collection(db, "stations")),
+      ]);
+      setLignes(lignesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setStations(stationsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
       console.error(e);
     } finally {
@@ -64,14 +102,94 @@ export default function LignesStationsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, []);
+
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedLines);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+    setExpandedLines(newSet);
+  };
+
+  const getStationsForLine = (codeLigne: string) => {
+    return stations.filter(
+      (s) =>
+        s.ligneAssociee === codeLigne || s.ligneAssociee?.includes(codeLigne),
+    );
+  };
+
+  const resetForm = () => {
+    setCode("");
+    setNom("");
+    setDepart("");
+    setDestination("");
+    setDistance("");
+    setDuree("");
+    setHeureDepart("");
+    setNombreStations("");
+    setBusActifs("");
+    setEtat("ACTIVE");
+    setLocalisation("");
+    setLigneAssociee("");
+    setHorairePassage("");
+    setEtatStation("ACTIVE");
+    setSelectedId(null);
+    setIsEditing(false);
+  };
+
+  const openEdit = (item: any, type: "Lignes" | "Stations") => {
+    setCurrentType(type);
+    setIsEditing(true);
+    setSelectedId(item.id);
+
+    if (type === "Lignes") {
+      setCode(item.code || "");
+      setNom(item.nom || "");
+      setDepart(item.depart || "");
+      setDestination(item.destination || "");
+      setDistance(item.distance?.toString() || "");
+      setDuree(item.duree?.toString() || "");
+      setHeureDepart(item.heureDepart || "");
+      setNombreStations(item.nombreStations?.toString() || "");
+      setBusActifs(item.busActifs?.toString() || "");
+      setEtat(item.etat || "ACTIVE");
+    } else {
+      setNom(item.nom || "");
+      setLocalisation(item.localisation || "");
+      setLigneAssociee(item.ligneAssociee || "");
+      setHorairePassage(item.horairePassage || "");
+      setEtatStation(item.etat || "ACTIVE");
+    }
+    setModalVisible(true);
+  };
 
   const handleSave = async () => {
-    const colName = activeTab === "Lignes" ? "lignes" : "stations";
+    const colName = currentType === "Lignes" ? "lignes" : "stations";
+
     const payload =
-      activeTab === "Lignes"
-        ? { code, nom, depart, destination, statut: "ACTIVE" }
-        : { nom, localisation, zone, statut: "ACTIVE" };
+      currentType === "Lignes"
+        ? {
+            code,
+            nom,
+            depart,
+            destination,
+            distance: parseFloat(distance) || 0,
+            duree: parseInt(duree) || 0,
+            heureDepart,
+            heureArrivee: addMinutesToTime(heureDepart, parseInt(duree) || 0),
+            nombreStations: parseInt(nombreStations) || 0,
+            busActifs: parseInt(busActifs) || 0,
+            etat,
+            updatedAt: new Date().toISOString(),
+          }
+        : {
+            nom,
+            localisation,
+            ligneAssociee,
+            horairePassage,
+            etat: etatStation,
+            updatedAt: new Date().toISOString(),
+          };
+
     try {
       if (isEditing && selectedId) {
         await updateDoc(doc(db, colName, selectedId), payload);
@@ -84,52 +202,28 @@ export default function LignesStationsPage() {
       setModalVisible(false);
       resetForm();
       fetchData();
+      alert("✅ Enregistré avec succès !");
     } catch (e) {
       console.error(e);
+      alert("❌ Erreur lors de l'enregistrement");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Supprimer cet élément ?")) {
+    if (confirm("Voulez-vous vraiment supprimer cet élément ?")) {
       try {
-        await deleteDoc(
-          doc(db, activeTab === "Lignes" ? "lignes" : "stations", id),
-        );
+        const colName = activeTab === "Lignes" ? "lignes" : "stations";
+        await deleteDoc(doc(db, colName, id));
         fetchData();
       } catch (e) {
-        console.error(e);
+        alert("Erreur lors de la suppression");
       }
     }
   };
 
-  const resetForm = () => {
-    setCode("");
-    setNom("");
-    setDepart("");
-    setDestination("");
-    setLocalisation("");
-    setZone("");
-    setSelectedId(null);
-  };
-
-  const openEdit = (item: any) => {
-    setIsEditing(true);
-    setSelectedId(item.id);
-    setNom(item.nom);
-    if (activeTab === "Lignes") {
-      setCode(item.code);
-      setDepart(item.depart);
-      setDestination(item.destination);
-    } else {
-      setLocalisation(item.localisation);
-      setZone(item.zone);
-    }
-    setModalVisible(true);
-  };
-
   return (
     <View style={styles.mainContainer}>
-      {/* ── HEADER[cite: 1] ── */}
+      {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity
@@ -139,9 +233,7 @@ export default function LignesStationsPage() {
           </TouchableOpacity>
           <View style={styles.titleContainer}>
             <Text style={styles.headerTitle}>Lignes & Stations Management</Text>
-            <Text style={styles.headerSubtitle}>
-              SUPERVISION ET GESTION EN TEMPS RÉEL
-            </Text>
+            <Text style={styles.headerSubtitle}>SUPERVISION EN TEMPS RÉEL</Text>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -156,29 +248,24 @@ export default function LignesStationsPage() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* ── 1. COMPTEURS (STATS)[cite: 1] ── */}
+        {/* STATS */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statVal}>
-              {activeTab === "Lignes" ? data.length : "3"}
-            </Text>
+            <Text style={styles.statVal}>{lignes.length}</Text>
             <Text style={styles.statLab}>TOTAL LIGNES</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statVal}>
-              {activeTab === "Stations" ? data.length : "6"}
-            </Text>
+            <Text style={styles.statVal}>{stations.length}</Text>
             <Text style={styles.statLab}>TOTAL STATIONS</Text>
           </View>
         </View>
 
-        {/* ── 2. TABLEAU DYNAMIQUE[cite: 1] ── */}
         <View style={styles.whiteCard}>
           <View style={styles.tabContainer}>
             {["Lignes", "Stations"].map((t) => (
               <TouchableOpacity
                 key={t}
-                onPress={() => setActiveTab(t)}
+                onPress={() => setActiveTab(t as "Lignes" | "Stations")}
                 style={[styles.tabBtn, activeTab === t && styles.tabActive]}
               >
                 <Text
@@ -193,56 +280,174 @@ export default function LignesStationsPage() {
             ))}
           </View>
 
-          <View style={styles.actionRow}>
-            <TextInput
-              style={styles.searchBar}
-              placeholder={`Rechercher ${activeTab}...`}
-              value={search}
-              onChangeText={setSearch}
-            />
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => {
-                setIsEditing(false);
-                resetForm();
-                setModalVisible(true);
-              }}
-            >
-              <Text style={styles.addBtnTxt}>+ Ajouter</Text>
-            </TouchableOpacity>
-          </View>
+          {/* ==================== LIGNES TAB ==================== */}
+          {activeTab === "Lignes" && (
+            <>
+              <View style={styles.actionRow}>
+                <TextInput
+                  style={styles.searchBar}
+                  placeholder="Rechercher une ligne..."
+                  value={search}
+                  onChangeText={setSearch}
+                />
+                <TouchableOpacity
+                  style={styles.addBtn}
+                  onPress={() => {
+                    resetForm();
+                    setCurrentType("Lignes");
+                    setModalVisible(true);
+                  }}
+                >
+                  <Text style={styles.addBtnTxt}>+ Ligne</Text>
+                </TouchableOpacity>
+              </View>
 
-          {loading ? (
-            <ActivityIndicator color="#1A73E8" />
-          ) : (
-            data
-              .filter((i) =>
-                i.nom?.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((item) => (
-                <View key={item.id} style={styles.tableRow}>
-                  <View style={{ flex: 2 }}>
-                    <Text style={{ fontWeight: "700" }}>{item.nom}</Text>
-                    <Text style={{ fontSize: 11, color: "#999" }}>
-                      {activeTab === "Lignes"
-                        ? `${item.code} | ${item.depart} → ${item.destination}`
-                        : item.localisation}
-                    </Text>
-                  </View>
-                  <View style={styles.rowActions}>
-                    <TouchableOpacity onPress={() => openEdit(item)}>
-                      <Feather name="edit-2" size={16} color="#777" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                      <Feather name="trash-2" size={16} color="#ef4444" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+              {lignes
+                .filter(
+                  (l) =>
+                    l.nom?.toLowerCase().includes(search.toLowerCase()) ||
+                    l.code?.toLowerCase().includes(search.toLowerCase()),
+                )
+                .map((ligne) => {
+                  const lineStations = getStationsForLine(ligne.code);
+                  const isExpanded = expandedLines.has(ligne.id);
+
+                  return (
+                    <View key={ligne.id} style={styles.lineCard}>
+                      <View style={styles.lineHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: "700", fontSize: 16 }}>
+                            {ligne.code} - {ligne.nom}
+                          </Text>
+                          <Text style={{ color: "#555" }}>
+                            {ligne.depart} → {ligne.destination}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#666",
+                              marginTop: 2,
+                            }}
+                          >
+                            {ligne.distance} km • {formatDuree(ligne.duree)} •{" "}
+                            {ligne.heureDepart} → {ligne.heureArrivee}
+                          </Text>
+                        </View>
+
+                        {/* Nombre de bus */}
+                        <View style={{ alignItems: "center", marginRight: 15 }}>
+                          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+                            {ligne.busActifs || 0}
+                          </Text>
+                          <Text style={{ fontSize: 10, color: "#666" }}>
+                            bus
+                          </Text>
+                        </View>
+
+                        {/* État */}
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor:
+                                ligne.etat === "ACTIVE"
+                                  ? "#10b981"
+                                  : ligne.etat === "RETARD"
+                                    ? "#f59e0b"
+                                    : "#ef4444",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={{
+                              color: "white",
+                              fontSize: 12,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {ligne.etat === "ACTIVE"
+                              ? "Actif"
+                              : ligne.etat === "RETARD"
+                                ? "Retard"
+                                : "H.S"}
+                          </Text>
+                        </View>
+
+                        {/* Actions */}
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 12,
+                            marginLeft: 10,
+                          }}
+                        >
+                          <TouchableOpacity
+                            onPress={() => openEdit(ligne, "Lignes")}
+                          >
+                            <Feather name="edit-2" size={18} color="#777" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDelete(ligne.id)}
+                          >
+                            <Feather name="trash-2" size={18} color="#ef4444" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => toggleExpand(ligne.id)}
+                          >
+                            <MaterialCommunityIcons
+                              name={isExpanded ? "chevron-up" : "chevron-down"}
+                              size={24}
+                              color="#666"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {isExpanded && (
+                        <View style={styles.stationsList}>
+                          <Text style={{ fontWeight: "600", marginBottom: 10 }}>
+                            Stations sur cette ligne :
+                          </Text>
+                          {lineStations.length > 0 ? (
+                            lineStations.map((st, idx) => (
+                              <View key={st.id} style={styles.stationRow}>
+                                <Text style={{ flex: 1 }}>
+                                  {idx + 1}. {st.nom}
+                                </Text>
+                                <Text
+                                  style={{
+                                    color: "#1A73E8",
+                                    fontWeight: "600",
+                                  }}
+                                >
+                                  {st.horairePassage || "—"}
+                                </Text>
+                              </View>
+                            ))
+                          ) : (
+                            <Text
+                              style={{ color: "#888", fontStyle: "italic" }}
+                            >
+                              Aucune station associée
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+            </>
+          )}
+
+          {/* Stations Tab (vide pour l'instant) */}
+          {activeTab === "Stations" && (
+            <Text style={{ textAlign: "center", padding: 30, color: "#888" }}>
+              Section Stations bientôt disponible...
+            </Text>
           )}
         </View>
 
-        {/* ── 3. MAP ── */}
+        {/* MAP */}
         <View style={styles.whiteCard}>
           <Text style={styles.cardTitle}>
             <MaterialCommunityIcons
@@ -252,58 +457,30 @@ export default function LignesStationsPage() {
             />{" "}
             Vue en Temps Réel
           </Text>
-          <View style={styles.mapBox}>
-            <Text style={{ color: "#999" }}>
-              Carte interactive (Simulation)
-            </Text>
-          </View>
-        </View>
-
-        {/* ── 4. STATUT DU RÉSEAU (E5ER HAJA)[cite: 1] ── */}
-        <View style={styles.networkCard}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.networkTitle}>Statut du Réseau</Text>
-            <Text style={styles.networkSubtitle}>
-              Le système fonctionne de manière optimale. Tous les capteurs IoT
-              sont actifs.
-            </Text>
-            <View style={styles.miniStatsRow}>
-              <View>
-                <Text style={styles.miniLabel}>PRÉCISION GPS</Text>
-                <Text style={styles.miniValue}>99.2%</Text>
-              </View>
-              <View style={{ marginLeft: 30 }}>
-                <Text style={styles.miniLabel}>UPTIME SERVEUR</Text>
-                <Text style={styles.miniValue}>99.98%</Text>
-              </View>
-            </View>
-          </View>
-          <MaterialCommunityIcons
-            name="bus-side"
-            size={70}
-            color="rgba(255,255,255,0.2)"
-          />
+          <NativeMap style={styles.mapContainer} />
         </View>
       </ScrollView>
 
-      {/* ── MODAL ── */}
+      {/* ==================== MODAL ==================== */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {isEditing ? "Modifier" : "Ajouter"} {activeTab}
+              {isEditing ? "Modifier" : "Ajouter"} {currentType}
             </Text>
-            {activeTab === "Lignes" ? (
+
+            {currentType === "Lignes" ? (
+              /* LIGNES FORM */
               <>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Code (ex: L01)"
+                  placeholder="Code Ligne (ex: L01)"
                   value={code}
                   onChangeText={setCode}
                 />
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Nom"
+                  placeholder="Nom de la ligne"
                   value={nom}
                   onChangeText={setNom}
                 />
@@ -319,34 +496,180 @@ export default function LignesStationsPage() {
                   value={destination}
                   onChangeText={setDestination}
                 />
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1 }]}
+                    placeholder="Distance (km)"
+                    value={distance}
+                    onChangeText={setDistance}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1 }]}
+                    placeholder="Durée (minutes)"
+                    value={duree}
+                    onChangeText={setDuree}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1 }]}
+                    placeholder="Heure Départ (HH:mm)"
+                    value={heureDepart}
+                    onChangeText={setHeureDepart}
+                  />
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1 }]}
+                    placeholder="Nb Stations"
+                    value={nombreStations}
+                    onChangeText={setNombreStations}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <Text
+                  style={{
+                    color: "#10b981",
+                    fontWeight: "600",
+                    marginVertical: 8,
+                  }}
+                >
+                  Arrivée estimée :{" "}
+                  {addMinutesToTime(heureDepart, parseInt(duree) || 0)}
+                </Text>
+
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Nombre de bus actifs"
+                  value={busActifs}
+                  onChangeText={setBusActifs}
+                  keyboardType="numeric"
+                />
+
+                <Text
+                  style={{ marginTop: 10, marginBottom: 6, fontWeight: "600" }}
+                >
+                  État de la ligne
+                </Text>
+                <View
+                  style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}
+                >
+                  {["ACTIVE", "RETARD", "HORS_SERVICE"].map((s: any) => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setEtat(s)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        borderRadius: 20,
+                        backgroundColor:
+                          etat === s
+                            ? s === "ACTIVE"
+                              ? "#10b981"
+                              : s === "RETARD"
+                                ? "#f59e0b"
+                                : "#ef4444"
+                            : "#f1f5f9",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: etat === s ? "white" : "#64748b",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {s === "ACTIVE"
+                          ? "Active"
+                          : s === "RETARD"
+                            ? "Retard"
+                            : "Hors Service"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </>
             ) : (
+              /* STATIONS FORM */
               <>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Nom Station"
+                  placeholder="Nom de la Station"
                   value={nom}
                   onChangeText={setNom}
                 />
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Localisation"
+                  placeholder="Ligne Associée"
+                  value={ligneAssociee}
+                  onChangeText={setLigneAssociee}
+                />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Localisation GPS"
                   value={localisation}
                   onChangeText={setLocalisation}
                 />
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="Zone"
-                  value={zone}
-                  onChangeText={setZone}
+                  placeholder="Horaire de passage (ex: 06:45)"
+                  value={horairePassage}
+                  onChangeText={setHorairePassage}
                 />
+
+                <Text
+                  style={{ marginTop: 12, marginBottom: 6, fontWeight: "600" }}
+                >
+                  État de la Station
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {["ACTIVE", "BUSY", "MAINTENANCE"].map((s: any) => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setEtatStation(s)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        borderRadius: 20,
+                        backgroundColor:
+                          etatStation === s
+                            ? s === "ACTIVE"
+                              ? "#10b981"
+                              : s === "BUSY"
+                                ? "#f59e0b"
+                                : "#64748b"
+                            : "#f1f5f9",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: etatStation === s ? "white" : "#64748b",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {s === "ACTIVE"
+                          ? "Active"
+                          : s === "BUSY"
+                            ? "Occupée"
+                            : "Maintenance"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </>
             )}
+
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
               <Text style={styles.saveBtnTxt}>Sauvegarder</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              onPress={() => setModalVisible(false)}
+              onPress={() => {
+                setModalVisible(false);
+                resetForm();
+              }}
               style={{ marginTop: 15 }}
             >
               <Text style={{ textAlign: "center", color: "#666" }}>
@@ -360,6 +683,7 @@ export default function LignesStationsPage() {
   );
 }
 
+/* ==================== STYLES ==================== */
 const styles = StyleSheet.create({
   mainContainer: { flex: 1, backgroundColor: "#F4F7FE" },
   header: {
@@ -393,6 +717,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   scrollContent: { padding: 20 },
   statsRow: { flexDirection: "row", gap: 15, marginBottom: 20 },
   statItem: {
@@ -404,6 +729,7 @@ const styles = StyleSheet.create({
   },
   statVal: { fontSize: 22, fontWeight: "bold" },
   statLab: { fontSize: 9, color: "#888", fontWeight: "bold", marginTop: 4 },
+
   whiteCard: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -418,9 +744,10 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   tabBtn: { paddingVertical: 10, paddingHorizontal: 15, marginRight: 10 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: "#1A73E8" },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: "#6b46c1" },
   tabTxt: { color: "#888", fontWeight: "bold" },
-  tabTxtActive: { color: "#1A73E8" },
+  tabTxtActive: { color: "#6b46c1" },
+
   actionRow: { flexDirection: "row", marginBottom: 15, gap: 10 },
   searchBar: {
     flex: 1,
@@ -431,53 +758,48 @@ const styles = StyleSheet.create({
     borderColor: "#EEE",
   },
   addBtn: {
-    backgroundColor: "#1A73E8",
+    backgroundColor: "#6b46c1",
     paddingHorizontal: 20,
     borderRadius: 8,
     justifyContent: "center",
   },
   addBtnTxt: { color: "white", fontWeight: "bold" },
-  tableRow: {
+
+  lineCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#EEE",
+  },
+  lineHeader: { flexDirection: "row", alignItems: "center", padding: 16 },
+  stationsList: {
+    padding: 16,
+    paddingTop: 0,
+    backgroundColor: "#f8fafc",
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+  },
+  stationRow: {
     flexDirection: "row",
-    paddingVertical: 15,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F8F9FA",
-    alignItems: "center",
+    borderBottomColor: "#f1f5f9",
   },
-  rowActions: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 15,
-  },
+
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+
   cardTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 15 },
-  mapBox: {
-    height: 150,
-    backgroundColor: "#F8F9FA",
+  mapContainer: {
+    height: 280,
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "#F8F9FA",
+    borderWidth: 1,
+    borderColor: "#EEE",
   },
-  networkCard: {
-    backgroundColor: "#1A73E8",
-    borderRadius: 15,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  networkTitle: { color: "white", fontSize: 18, fontWeight: "bold" },
-  networkSubtitle: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 11,
-    marginVertical: 8,
-  },
-  miniStatsRow: { flexDirection: "row", marginTop: 10 },
-  miniLabel: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 8,
-    fontWeight: "bold",
-  },
-  miniValue: { color: "white", fontSize: 14, fontWeight: "bold" },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -495,10 +817,11 @@ const styles = StyleSheet.create({
     borderColor: "#EEE",
   },
   saveBtn: {
-    backgroundColor: "#1A73E8",
+    backgroundColor: "#6b46c1",
     padding: 15,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
   },
   saveBtnTxt: { color: "white", fontWeight: "bold" },
 });

@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { store } from "../redux/store";
+import { FavoritesProvider } from '../context/FavoritesContext';
 
 export default function RootLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -25,24 +26,27 @@ export default function RootLayout() {
       }
       setLoading(false);
     });
+
     return unsubscribe;
   }, []);
 
-  if (loading) return null;
+  if (loading) {
+    return null;
+  }
 
   return (
     <Provider store={store}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Si Admin, on charge le Layout Drawer du dossier (admin) */}
-          {isAdmin ? (
-            <Stack.Screen name="(admin)" />
-          ) : (
-            <Stack.Screen name="(auth)/signin" />
-          )}
-          {/* Optionnel: page index ou passager */}
-          <Stack.Screen name="index" />
-        </Stack>
+        <FavoritesProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            {isAdmin ? (
+              <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+            ) : (
+              <Stack.Screen name="(auth)/signin" options={{ headerShown: false }} />
+            )}
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+          </Stack>
+        </FavoritesProvider>
       </GestureHandlerRootView>
     </Provider>
   );

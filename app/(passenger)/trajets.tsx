@@ -1,4 +1,5 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+ 
+ 
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -8,34 +9,45 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-// import MapView, { Marker } from "react-native-maps"; // Thabet enek sabitha: npx expo install react-native-maps
-import NativeMap from "@/components/NativeMap";
 
-// Firebase Config
+
+// Firebase
 import { db } from "@/configFirebase";
 import { collection, getDocs } from "firebase/firestore";
 import { SafeAreaView } from "react-native-safe-area-context";
+import NativeMap from "@/components/NativeMap.web";
+
+// Helpers
+const formatDuree = (minutes: number): string => {
+  if (!minutes) return "—";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  return `${m}min`;
+};
 
 export default function LignesStationsPassenger() {
-  const [activeTab, setActiveTab] = useState("Lines");
-  const [data, setData] = useState<any[]>([]);
+  const [lignes, setLignes] = useState<any[]>([]);
+  const [stations, setStations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const colName = activeTab === "Lines" ? "lignes" : "stations";
-      const querySnapshot = await getDocs(collection(db, colName));
-      const list: any[] = [];
-      querySnapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() });
-      });
-      setData(list);
+      const [lignesSnap, stationsSnap] = await Promise.all([
+        getDocs(collection(db, "lignes")),
+        getDocs(collection(db, "stations")),
+      ]);
+
+      setLignes(lignesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setStations(stationsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      console.error("Error:", e);
+      console.error("Error fetching data:", e);
     } finally {
       setLoading(false);
     }
@@ -43,145 +55,137 @@ export default function LignesStationsPassenger() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, []);
+
+  const toggleExpand = (id: string) => {
+    const newSet = new Set(expandedLines);
+    newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+    setExpandedLines(newSet);
+  };
+
+  const getStationsForLine = (codeLigne: string) => {
+    return stations.filter(
+      (s) =>
+        s.ligneAssociee === codeLigne || s.ligneAssociee?.includes(codeLigne),
+    );
+  };
+
+  const filteredLignes = lignes.filter(
+    (l) =>
+      l.nom?.toLowerCase().includes(search.toLowerCase()) ||
+      l.code?.toLowerCase().includes(search.toLowerCase()),
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* HEADER & SEARCH */}
         <Text style={styles.mainTitle}>Lignes & Stations</Text>
+
+        {/* SEARCH */}
         <View style={styles.searchContainer}>
           <Feather name="search" size={20} color="#ADB5BD" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for a line or station"
+            placeholder="Rechercher une ligne..."
             value={search}
             onChangeText={setSearch}
           />
         </View>
 
-        {/* TOGGLE LINES/STATIONS */}
-        <View style={styles.toggleContainer}>
-          <TouchableOpacity
-            style={[
-              styles.toggleBtn,
-              activeTab === "Lines" && styles.toggleActive,
-            ]}
-            onPress={() => setActiveTab("Lines")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                activeTab === "Lines" && styles.toggleTextActive,
-              ]}
-            >
-              Lines
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.toggleBtn,
-              activeTab === "Stations" && styles.toggleActive,
-            ]}
-            onPress={() => setActiveTab("Stations")}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                activeTab === "Stations" && styles.toggleTextActive,
-              ]}
-            >
-              Stations
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* --- MAP INTEGRATION --- */}
+        {/* MAP */}
         <View style={styles.mapWrapper}>
           <Text style={styles.sectionTitle}>
-            <Ionicons name="map-outline" size={18} color="#1A73E8" /> Live Map
-            View
+            <Ionicons name="map-outline" size={18} color="#1A73E8" /> Vue en
+            Temps Réel
           </Text>
-          <NativeMap stations={data} showMarkers={activeTab === "Stations"} />
-
-          {/* <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: 36.8065, // Tunis
-              longitude: 10.1815,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}
-          >
-            {activeTab === "Stations" &&
-              data.map((station) => (
-                <Marker
-                  key={station.id}
-                  coordinate={{
-                    latitude: station.lat || 36.8065,
-                    longitude: station.lng || 10.1815,
-                  }}
-                  title={station.nom}
-                  description={station.localisation}
-                />
-              ))}
-          </MapView> */}
+          <NativeMap style={styles.map} stations={stations} />
         </View>
 
-        {/* LIST DATA[cite: 1] */}
-        <Text style={styles.sectionTitle}>
-          {activeTab === "Lines" ? "Available Lines" : "Nearby Stations"}
-        </Text>
+        {/* LIST OF LINES */}
+        <Text style={styles.sectionTitle}>Lignes Disponibles</Text>
 
         {loading ? (
           <ActivityIndicator size="large" color="#1A73E8" />
         ) : (
           <View style={styles.listContainer}>
-            {data
-              .filter((item) =>
-                item.nom?.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((item) =>
-                activeTab === "Lines" ? (
-                  <View key={item.id} style={styles.lineCard}>
+            {filteredLignes.map((ligne) => {
+              const lineStations = getStationsForLine(ligne.code);
+              const isExpanded = expandedLines.has(ligne.id);
+
+              return (
+                <View key={ligne.id} style={styles.lineCard}>
+                  {/* Ligne Header */}
+                  <TouchableOpacity
+                    style={styles.lineHeader}
+                    onPress={() => toggleExpand(ligne.id)}
+                  >
                     <View style={styles.busIconContainer}>
                       <MaterialCommunityIcons
                         name="bus"
-                        size={24}
+                        size={28}
                         color="white"
                       />
                     </View>
+
                     <View style={styles.cardInfo}>
                       <Text style={styles.lineName}>
-                        Line {item.code || item.nom}
+                        {ligne.code} - {ligne.nom}
                       </Text>
                       <Text style={styles.lineRoute}>
-                        {item.depart} → {item.destination}
+                        {ligne.depart} → {ligne.destination}
+                      </Text>
+                      <Text style={styles.lineDetails}>
+                        {ligne.distance} km • {formatDuree(ligne.duree)} •{" "}
+                        {ligne.heureDepart} → {ligne.heureArrivee}
                       </Text>
                     </View>
-                    <View style={styles.liveBadge}>
-                      <Text style={styles.liveText}>LIVE</Text>
-                    </View>
-                  </View>
-                ) : (
-                  <View key={item.id} style={styles.stationCard}>
-                    <View style={styles.stationIconContainer}>
-                      <MaterialCommunityIcons
-                        name="map-marker-outline"
-                        size={22}
-                        color="#ADB5BD"
-                      />
-                    </View>
-                    <View style={styles.stationInfo}>
-                      <Text style={styles.stationName}>{item.nom}</Text>
-                      <Text style={styles.distanceText}>
-                        {item.localisation || "200m"}
+
+                    <MaterialCommunityIcons
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={26}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+
+                  {/* Expanded Stations */}
+                  {isExpanded && (
+                    <View style={styles.stationsContainer}>
+                      <Text style={styles.stationsTitle}>
+                        Stations sur cette ligne :
                       </Text>
+
+                      {lineStations.length > 0 ? (
+                        lineStations.map((station, idx) => (
+                          <View key={station.id} style={styles.stationItem}>
+                            <Text style={styles.stationNumber}>{idx + 1}.</Text>
+                            <Text style={styles.stationName}>
+                              {station.nom}
+                            </Text>
+                            <View style={styles.timeContainer}>
+                              <Text style={styles.stationTime}>
+                                {station.horairePassage || "—"}
+                              </Text>
+                            </View>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={styles.noStations}>
+                          Aucune station associée pour le moment
+                        </Text>
+                      )}
+
+                      {/* Bouton Voir sur la carte */}
+                      <TouchableOpacity style={styles.mapButton}>
+                        <Ionicons name="map" size={18} color="white" />
+                        <Text style={styles.mapButtonText}>
+                          Voir sur la carte
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#EEE" />
-                  </View>
-                ),
-              )}
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -192,12 +196,14 @@ export default function LignesStationsPassenger() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FBFDFF" },
   scrollContent: { padding: 20 },
+
   mainTitle: {
     fontSize: 26,
     fontWeight: "bold",
     color: "#002140",
     marginBottom: 15,
   },
+
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -208,364 +214,107 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 15 },
-  toggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F1F4F8",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  toggleActive: { backgroundColor: "white", elevation: 2, shadowOpacity: 0.05 },
-  toggleText: { fontWeight: "600", color: "#6C757D" },
-  toggleTextActive: { color: "#1A73E8" },
 
-  // Map Styling[cite: 1]
   mapWrapper: { marginBottom: 25 },
-  map: { width: "100%", height: 200, borderRadius: 15, marginTop: 10 },
+  map: { width: "100%", height: 220, borderRadius: 15 },
+
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#002140",
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   listContainer: { gap: 12 },
+
   lineCard: {
-    flexDirection: "row",
-    backgroundColor: "#EBF4FF",
-    borderRadius: 18,
-    padding: 15,
-    alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E9F0",
   },
+
+  lineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+
   busIconContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 10,
+    width: 52,
+    height: 52,
+    borderRadius: 12,
     backgroundColor: "#1A73E8",
     justifyContent: "center",
     alignItems: "center",
   },
+
   cardInfo: { marginLeft: 15, flex: 1 },
-  lineName: { fontSize: 16, fontWeight: "bold", color: "#002140" },
-  lineRoute: { fontSize: 12, color: "#6C757D", marginTop: 2 },
-  liveBadge: {
-    backgroundColor: "#2CCFBC",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-  },
-  liveText: { color: "white", fontSize: 10, fontWeight: "bold" },
+  lineName: { fontSize: 17, fontWeight: "bold", color: "#002140" },
+  lineRoute: { fontSize: 14, color: "#6C757D", marginTop: 2 },
+  lineDetails: { fontSize: 13, color: "#888", marginTop: 4 },
 
-  stationCard: {
+  stationsContainer: {
+    backgroundColor: "#F8FAFC",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E9F0",
+  },
+  stationsTitle: {
+    fontWeight: "600",
+    color: "#444",
+    marginBottom: 12,
+  },
+  stationItem: {
     flexDirection: "row",
-    backgroundColor: "white",
-    borderRadius: 18,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F5",
+  },
+  stationNumber: {
+    width: 24,
+    color: "#888",
+    fontWeight: "500",
+  },
+  stationName: {
+    flex: 1,
+    fontSize: 15.5,
+    color: "#002140",
+  },
+  timeContainer: {
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  stationTime: {
+    color: "#1A73E8",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  noStations: {
+    color: "#888",
+    fontStyle: "italic",
+    textAlign: "center",
     padding: 15,
-    elevation: 1,
-    shadowOpacity: 0.05,
-    alignItems: "center",
   },
-  stationIconContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 12,
-    backgroundColor: "#F8F9FA",
+
+  mapButton: {
+    backgroundColor: "#1A73E8",
+    flexDirection: "row",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 8,
   },
-  stationInfo: { flex: 1, marginLeft: 15 },
-  stationName: { fontSize: 15, fontWeight: "bold", color: "#002140" },
-  distanceText: { fontSize: 12, color: "#ADB5BD", marginTop: 2 },
+  mapButtonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 15,
+  },
 });
-
-
-
-// /* eslint-disable react-hooks/exhaustive-deps */
-// import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-// import React, { useEffect, useState } from "react";
-// import {
-//   ActivityIndicator,
-//   Platform,
-//   ScrollView,
-//   StyleSheet,
-//   Text,
-//   TextInput,
-//   TouchableOpacity,
-//   View,
-// } from "react-native";
-// // Remove all of this:
-// // let MapView: any = null;
-// // let Marker: any = null;
-// // if (Platform.OS !== "web") { ... }
-// // const WebMap = Platform.OS === "web" ? require(...) : null;
-
-// // Replace with:
-
-// // Firebase Config
-// import { db } from "@/configFirebase";
-// import { collection, getDocs } from "firebase/firestore";
-// import { SafeAreaView } from "react-native-safe-area-context";
-// import NativeMap from "@/components/NativeMap";
-
-// // Native maps — only imported on mobile to avoid crashing on web
-// let MapView: any = null;
-// let Marker: any = null;
-// if (Platform.OS !== "web") {
-//   const maps = require("react-native-maps");
-//   MapView = maps.default;
-//   Marker = maps.Marker;
-// }
-
-// // Web map — lazy require so Leaflet (browser-only) never loads on mobile
-// const WebMap: React.ComponentType<{ stations: any[] }> | null =
-//   Platform.OS === "web" ? require("../../components/WebMap").default : null;
-
-// export default function LignesStationsPassenger() {
-//   const [activeTab, setActiveTab] = useState("Lines");
-//   const [data, setData] = useState<any[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [search, setSearch] = useState("");
-
-//   const fetchData = async () => {
-//     setLoading(true);
-//     try {
-//       const colName = activeTab === "Lines" ? "lignes" : "stations";
-//       const querySnapshot = await getDocs(collection(db, colName));
-//       const list: any[] = [];
-//       querySnapshot.forEach((doc) => {
-//         list.push({ id: doc.id, ...doc.data() });
-//       });
-//       setData(list);
-//     } catch (e) {
-//       console.error("Error fetching data:", e);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchData();
-//   }, [activeTab]);
-
-//   const filteredData = data.filter((item) =>
-//     item.nom?.toLowerCase().includes(search.toLowerCase())
-//   );
-
-//   const stations = activeTab === "Stations" ? data : [];
-
-//   return (
-//     <SafeAreaView style={styles.container}>
-//       <ScrollView contentContainerStyle={styles.scrollContent}>
-//         {/* HEADER */}
-//         <Text style={styles.mainTitle}>Lignes & Stations</Text>
-
-//         {/* SEARCH */}
-//         <View style={styles.searchContainer}>
-//           <Feather name="search" size={20} color="#ADB5BD" />
-//           <TextInput
-//             style={styles.searchInput}
-//             placeholder="Search for a line or station"
-//             value={search}
-//             onChangeText={setSearch}
-//           />
-//         </View>
-
-//         {/* TOGGLE LINES / STATIONS */}
-//         <View style={styles.toggleContainer}>
-//           <TouchableOpacity
-//             style={[
-//               styles.toggleBtn,
-//               activeTab === "Lines" && styles.toggleActive,
-//             ]}
-//             onPress={() => setActiveTab("Lines")}
-//           >
-//             <Text
-//               style={[
-//                 styles.toggleText,
-//                 activeTab === "Lines" && styles.toggleTextActive,
-//               ]}
-//             >
-//               Lines
-//             </Text>
-//           </TouchableOpacity>
-//           <TouchableOpacity
-//             style={[
-//               styles.toggleBtn,
-//               activeTab === "Stations" && styles.toggleActive,
-//             ]}
-//             onPress={() => setActiveTab("Stations")}
-//           >
-//             <Text
-//               style={[
-//                 styles.toggleText,
-//                 activeTab === "Stations" && styles.toggleTextActive,
-//               ]}
-//             >
-//               Stations
-//             </Text>
-//           </TouchableOpacity>
-//         </View>
-
-//         {/* MAP */}
-// <View style={styles.mapWrapper}>
-//   <Text style={styles.sectionTitle}>
-//     <Ionicons name="map-outline" size={18} color="#1A73E8" /> Live Map View
-//   </Text>
-//   <NativeMap
-//     stations={data}
-//     showMarkers={activeTab === "Stations"}
-//   />
-// </View>
-//         {/* LIST */}
-//         <Text style={styles.sectionTitle}>
-//           {activeTab === "Lines" ? "Available Lines" : "Nearby Stations"}
-//         </Text>
-
-//         {loading ? (
-//           <ActivityIndicator size="large" color="#1A73E8" />
-//         ) : (
-//           <View style={styles.listContainer}>
-//             {filteredData.map((item) =>
-//               activeTab === "Lines" ? (
-//                 <View key={item.id} style={styles.lineCard}>
-//                   <View style={styles.busIconContainer}>
-//                     <MaterialCommunityIcons
-//                       name="bus"
-//                       size={24}
-//                       color="white"
-//                     />
-//                   </View>
-//                   <View style={styles.cardInfo}>
-//                     <Text style={styles.lineName}>
-//                       Line {item.code || item.nom}
-//                     </Text>
-//                     <Text style={styles.lineRoute}>
-//                       {item.depart} → {item.destination}
-//                     </Text>
-//                   </View>
-//                   <View style={styles.liveBadge}>
-//                     <Text style={styles.liveText}>LIVE</Text>
-//                   </View>
-//                 </View>
-//               ) : (
-//                 <View key={item.id} style={styles.stationCard}>
-//                   <View style={styles.stationIconContainer}>
-//                     <MaterialCommunityIcons
-//                       name="map-marker-outline"
-//                       size={22}
-//                       color="#ADB5BD"
-//                     />
-//                   </View>
-//                   <View style={styles.stationInfo}>
-//                     <Text style={styles.stationName}>{item.nom}</Text>
-//                     <Text style={styles.distanceText}>
-//                       {item.localisation || "200m"}
-//                     </Text>
-//                   </View>
-//                   <Ionicons name="chevron-forward" size={18} color="#EEE" />
-//                 </View>
-//               )
-//             )}
-//           </View>
-//         )}
-//       </ScrollView>
-//     </SafeAreaView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: "#FBFDFF" },
-//   scrollContent: { padding: 20 },
-//   mainTitle: {
-//     fontSize: 26,
-//     fontWeight: "bold",
-//     color: "#002140",
-//     marginBottom: 15,
-//   },
-//   searchContainer: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     backgroundColor: "#F1F4F8",
-//     borderRadius: 12,
-//     paddingHorizontal: 15,
-//     height: 50,
-//     marginBottom: 20,
-//   },
-//   searchInput: { flex: 1, marginLeft: 10, fontSize: 15 },
-//   toggleContainer: {
-//     flexDirection: "row",
-//     backgroundColor: "#F1F4F8",
-//     borderRadius: 12,
-//     padding: 4,
-//     marginBottom: 20,
-//   },
-//   toggleBtn: {
-//     flex: 1,
-//     paddingVertical: 10,
-//     alignItems: "center",
-//     borderRadius: 10,
-//   },
-//   toggleActive: { backgroundColor: "white", elevation: 2, shadowOpacity: 0.05 },
-//   toggleText: { fontWeight: "600", color: "#6C757D" },
-//   toggleTextActive: { color: "#1A73E8" },
-//   mapWrapper: { marginBottom: 25 },
-//   map: { width: "100%", height: 200, borderRadius: 15, marginTop: 10 },
-//   sectionTitle: {
-//     fontSize: 16,
-//     fontWeight: "bold",
-//     color: "#002140",
-//     marginBottom: 10,
-//   },
-//   listContainer: { gap: 12 },
-//   lineCard: {
-//     flexDirection: "row",
-//     backgroundColor: "#EBF4FF",
-//     borderRadius: 18,
-//     padding: 15,
-//     alignItems: "center",
-//   },
-//   busIconContainer: {
-//     width: 45,
-//     height: 45,
-//     borderRadius: 10,
-//     backgroundColor: "#1A73E8",
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   cardInfo: { marginLeft: 15, flex: 1 },
-//   lineName: { fontSize: 16, fontWeight: "bold", color: "#002140" },
-//   lineRoute: { fontSize: 12, color: "#6C757D", marginTop: 2 },
-//   liveBadge: {
-//     backgroundColor: "#2CCFBC",
-//     paddingHorizontal: 8,
-//     paddingVertical: 3,
-//     borderRadius: 5,
-//   },
-//   liveText: { color: "white", fontSize: 10, fontWeight: "bold" },
-//   stationCard: {
-//     flexDirection: "row",
-//     backgroundColor: "white",
-//     borderRadius: 18,
-//     padding: 15,
-//     elevation: 1,
-//     shadowOpacity: 0.05,
-//     alignItems: "center",
-//   },
-//   stationIconContainer: {
-//     width: 45,
-//     height: 45,
-//     borderRadius: 12,
-//     backgroundColor: "#F8F9FA",
-//     justifyContent: "center",
-//     alignItems: "center",
-//   },
-//   stationInfo: { flex: 1, marginLeft: 15 },
-//   stationName: { fontSize: 15, fontWeight: "bold", color: "#002140" },
-//   distanceText: { fontSize: 12, color: "#ADB5BD", marginTop: 2 },
-// });

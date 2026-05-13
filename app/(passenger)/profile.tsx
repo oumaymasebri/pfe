@@ -65,7 +65,7 @@ const InputField: React.FC<InputFieldProps> = ({
       <Ionicons
         name={icon as any}
         size={20}
-        color={error ? "#FF3B30" : "#6B4EFF"}
+        color={error ? "#FF3B30" : "#6b46c1"}
         style={fieldStyles.icon}
       />
       <TextInput
@@ -172,20 +172,37 @@ const ProfileScreen = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+const handleLogout = () => {
+  // Sur Web, Alert.alert utilise window.confirm automatiquement.
+  Alert.alert(
+    "Déconnexion", 
+    "Êtes-vous sûr de vouloir vous déconnecter ?", 
+    [
       { text: "Annuler", style: "cancel" },
       {
         text: "Déconnexion",
         style: "destructive",
-        onPress: () => {
-          dispatch(logout());
-          AsyncStorage.removeItem("userToken");
-          router.replace("/(auth)/signin");
+        onPress: async () => {
+          try {
+            // 1. Supprimer le token du stockage local (indispensable d'attendre ici)
+            await AsyncStorage.removeItem("userToken");
+
+            // 2. Mettre à jour l'état global Redux
+            dispatch(logout()); 
+
+            // 3. Rediriger vers la page de connexion
+            // On utilise replace pour vider la pile de navigation
+            router.replace("/(auth)/signin");
+          } catch (error) {
+            console.error("Erreur lors de la déconnexion :", error);
+            // En cas d'échec du storage, on force quand même le retour au login
+            router.replace("/(auth)/signin");
+          }
         },
       },
-    ]);
-  };
+    ]
+  );
+};
 
   // ─── Validation profil ─────────────────────────────────────────────────────
   const validateProfile = (): boolean => {
@@ -430,7 +447,7 @@ const handleSaveProfile = async () => {
                 />
               ) : (
                 <View style={styles.avatarFallback}>
-                  <Ionicons name="person" size={60} color="#6B4EFF" />
+                  <Ionicons name="person" size={60} color="#6b46c1" />
                 </View>
               )}
               <TouchableOpacity
@@ -479,7 +496,7 @@ const handleSaveProfile = async () => {
                     <Ionicons
                       name={item.icon as any}
                       size={24}
-                      color={item.active ? "#6B4EFF" : "#6B4EFF"}
+                      color={item.active ? "#6b46c1" : "#6b46c1"}
                     />
                   </View>
                   <Text
@@ -499,7 +516,7 @@ const handleSaveProfile = async () => {
                         : "chevron-forward"
                     }
                     size={20}
-                    color={item.active ? "#6B4EFF" : "#ccc"}
+                    color={item.active ? "#6b46c1" : "#ccc"}
                   />
                 </TouchableOpacity>
 
@@ -780,7 +797,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: "#6B4EFF",
+    borderColor: "#6b46c1",
   },
   avatarFallback: {
     width: 120,
@@ -790,13 +807,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 4,
-    borderColor: "#6B4EFF",
+    borderColor: "#6b46c1",
   },
   editAvatarButton: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#6B4EFF",
+    backgroundColor: "#6b46c1",
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -844,7 +861,7 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#6B4EFF",
+    color: "#6b46c1",
   },
   statLabel: {
     fontSize: 13,
@@ -884,7 +901,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   menuTitleActive: {
-    color: "#6B4EFF",
+    color: "#6b46c1",
     fontWeight: "600",
   },
 
@@ -924,11 +941,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: "#6B4EFF",
+    backgroundColor: "#6b46c1",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#6B4EFF",
+    shadowColor: "#6b46c1",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     elevation: 5,

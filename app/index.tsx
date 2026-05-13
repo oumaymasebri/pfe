@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router"; // 1. Import el router
 import React from "react";
@@ -18,15 +18,20 @@ export default function WelcomePage() {
   return (
     <View style={styles.container}>
       {/* Section Illustration */}
-      <View style={styles.imageContainer}>
-        <LinearGradient
-          colors={["#d1a3f2", "#cdc9d3"]}
-          style={styles.circleDecor}
-        />
-        <View style={styles.iconCircle}>
-          <Feather name="truck" size={60} color="#fff" />
-        </View>
-      </View>
+
+<View style={styles.imageContainer}>
+  <LinearGradient
+    colors={["#6b46c1", "#cdc9d3"]}
+    style={styles.circleDecor}
+  />
+  <View style={styles.iconCircle}>
+    <MaterialCommunityIcons
+      name="bus" 
+      size={68} 
+      color="#fff" 
+    />
+  </View>
+</View>
 
       <View style={styles.textContainer}>
         <Text style={styles.title}>Smart Bus</Text>
@@ -106,7 +111,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: { width: "100%", paddingHorizontal: 30, gap: 15 },
   signInButton: {
-    backgroundColor: "#8348a9",
+    backgroundColor: "#6b46c1",
     height: 65,
     borderRadius: 20,
     flexDirection: "row",

@@ -1,8 +1,9 @@
-// app/(tabs)/home.tsx
 import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location"; // hedha lil GPS
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react"; // useState w useEffect
 import {
+  ActivityIndicator,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,7 +15,43 @@ import {
 import { useSelector } from "react-redux";
 
 const HomeScreen = () => {
+  const weatherData = {
+    temp: "22°C",
+    condition: "Pluie légère",
+    rainChance: "40%",
+    icon: "rainy" as const, // Nom de l'icône Ionicons
+    color: "#4A90E2", // Bleu Rainbow.ai
+  };
   const user = useSelector((state: any) => state.user.user);
+  const [weather, setWeather] = useState<any>(null);
+  const [loadingWeather, setLoadingWeather] = useState(true);
+
+  const fetchWeather = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      let location = await Location.getCurrentPositionAsync({});
+      const API_KEY = "eabbf5801dd6df7ef8bcd1628036ddbc";
+      const response = await fetch(
+        "https://api.openweathermap.org/data/2.5/weather?q=London,uk&APPID=eabbf5801dd6df7ef8bcd1628036ddbc&units=metric"
+      );
+      const data = await response.json();
+      setWeather({
+        temp: Math.round(data.main.temp),
+        condition: data.weather[0].description,
+        rainChance: data.clouds ? data.clouds.all : 0,
+        icon: data.weather[0].main === "Rain" ? "rainy" : "sunny",
+      });
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather();
+  }, []);
   const suggestions = [
     {
       id: 1,
@@ -75,10 +112,6 @@ const HomeScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Ionicons name="menu" size={28} color="#000" />
-        </TouchableOpacity>
-
         <Text style={styles.appTitle}>SMART APP BUS</Text>
 
         {/* Bouton Profil */}
@@ -91,8 +124,36 @@ const HomeScreen = () => {
 
       {/* Greeting */}
       <View style={styles.greeting}>
-        <Text style={styles.greetingText}>Bonjour, {user?.name || "Alex"} 👋</Text>
+        <Text style={styles.greetingText}>
+          Bonjour, {user?.name || "Alex"} 👋
+        </Text>
         <Text style={styles.subGreeting}>Où allons-nous aujourd’hui ?</Text>
+      </View>
+      {/* --- SECTION MÉTÉO --- */}
+      <View style={styles.weatherWidget}>
+        {loadingWeather ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          weather && (
+            <>
+              <View style={styles.weatherMain}>
+                <Ionicons name={weather.icon} size={32} color="#fff" />
+                <View style={styles.weatherTextContainer}>
+                  <Text style={styles.weatherTemp}>{weather.temp}°C</Text>
+                  <Text style={styles.weatherCondition}>
+                    {weather.condition}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.weatherDetails}>
+                <Text style={styles.rainChanceText}>
+                  🌧 {weather.rainChance}% nuages
+                </Text>
+                <Text style={styles.precisText}>PRÉCISION RAINBOW.AI</Text>
+              </View>
+            </>
+          )
+        )}
       </View>
 
       {/* Search Bar */}
@@ -132,12 +193,15 @@ const HomeScreen = () => {
         </View>
 
         {/* Bus Proches */}
+
+        
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>BUS PROCHES</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeMapText}>Voir carte →</Text>
-          </TouchableOpacity>
-        </View>
+  <Text style={styles.sectionTitle}>BUS PROCHES</Text>
+  {/* Zid el onPress hna */}
+  <TouchableOpacity onPress={() => router.push("/(passenger)/trajets")}>  
+    <Text style={styles.seeMapText}>Voir carte →</Text>
+  </TouchableOpacity>
+</View>
 
         {nearbyBuses.map((bus) => (
           <View key={bus.id} style={styles.busCard}>
@@ -189,11 +253,44 @@ const HomeScreen = () => {
           ))}
         </View>
       </ScrollView>
+
+      {/* --- BOUTON CHATBOT AJOUTÉ --- */}
+      <TouchableOpacity
+        style={styles.chatFab}
+        onPress={() => router.push("../(passenger)/chatbot")}
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
+        <View style={styles.chatBadge} />
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // ---  styles Météo ---
+ weatherWidget: {
+    backgroundColor: "#9575CD",
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    minHeight: 100, //  hedha bech dima ykoun fih height
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    elevation: 5,
+  },
+  weatherMain: { flexDirection: "row", alignItems: "center" },
+  weatherTextContainer: { marginLeft: 12 },
+  weatherTemp: { fontSize: 22, fontWeight: "800", color: "#fff" },
+  weatherCondition: {
+    fontSize: 14,
+    color: "#fff",
+    textTransform: "capitalize",
+  },
+  weatherDetails: { alignItems: "flex-end" },
+  rainChanceText: { fontSize: 12, fontWeight: "bold", color: "#fff" },
+  precisText: { fontSize: 8, color: "#ddd", marginTop: 2 },
   container: { flex: 1, backgroundColor: "#F8F9FA" },
   header: {
     flexDirection: "row",
@@ -204,16 +301,18 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     backgroundColor: "#fff",
   },
+
+
   appTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#6B4EFF",
+    color: "#6b46c1",
   },
   profileCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#6B4EFF",
+    backgroundColor: "#6b46c1",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -331,6 +430,36 @@ const styles = StyleSheet.create({
   },
   favoriteName: { fontSize: 16, fontWeight: "600" },
   favoriteDesc: { fontSize: 13, color: "#666", marginTop: 4 },
+
+  // Nouveaux styles pour le ChatBot
+  chatFab: {
+    position: "absolute",
+    bottom: 25,
+    right: 20,
+    backgroundColor: "#6B4EFF",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#6B4EFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  chatBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 15,
+    height: 15,
+    backgroundColor: "#34C759",
+    borderRadius: 7.5,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
 });
 
 export default HomeScreen;

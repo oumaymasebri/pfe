@@ -1,86 +1,85 @@
-// app/(tabs)/(passenger)/_layout.tsx
-import { Ionicons } from "@expo/vector-icons";
+import Icon from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
+import React from "react";
 
-export default function TabsLayout() {
+export default function PassengerLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#6B4EFF", // Couleur principale (violet)
-        tabBarInactiveTintColor: "#8E8E93",
+        tabBarActiveTintColor: "#e30613", // Rouge Transtu
+        tabBarInactiveTintColor: "#777",
         tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopWidth: 1,
-          borderTopColor: "#E5E5EA",
-          height: 60,
+          height: 68,
           paddingBottom: 8,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: "#eee",
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
-        headerShown: false, // On cache le header par défaut
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-          title: "Acceuil",
+          title: "Accueil",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Icon name="home-outline" size={size} color={color} />
           ),
         }}
       />
-      {/* Onglet Trajets */}
+
       <Tabs.Screen
         name="trajets"
         options={{
           title: "Trajets",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bus" size={size} color={color} />
+            <Icon name="bus-outline" size={size} color={color} />
           ),
         }}
       />
 
-      {/* Onglet Favoris */}
       <Tabs.Screen
         name="favoris"
         options={{
           title: "Favoris",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart" size={size} color={color} />
+            <Icon name="heart" size={size} color={color} />
           ),
         }}
       />
 
-      {/* Onglet Alertes */}
       <Tabs.Screen
         name="alertes"
         options={{
           title: "Alertes",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="notifications" size={size} color={color} />
+            <Icon name="notifications-outline" size={size} color={color} />
           ),
-          tabBarBadge: 3,
+          tabBarBadge: 3, // Nombre rouge comme dans l'image
         }}
       />
 
-      {/* Onglet Profil */}
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profil",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Icon name="person-outline" size={size} color={color} />
           ),
         }}
       />
+
+      {/* Chatbot si tu veux l'ajouter */}
       <Tabs.Screen
-        name="parametres"
+        name="chatbot"
         options={{
-          title: "Paramétres",
+          title: "Chatbot",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size} color={color} />
+            <Icon
+              name="chatbubble-ellipses-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />

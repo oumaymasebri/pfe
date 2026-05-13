@@ -6,7 +6,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 export default function AdminLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      
       <Drawer
         drawerContent={(props) => <Sidebar {...props} />}
         screenOptions={{
@@ -33,6 +32,10 @@ export default function AdminLayout() {
         />
         <Drawer.Screen
           name="lignes-stations/ligne-station"
+          options={{ drawerItemStyle: { display: "none" } }}
+        />
+        <Drawer.Screen
+          name="alertes/alertes"
           options={{ drawerItemStyle: { display: "none" } }}
         />
       </Drawer>

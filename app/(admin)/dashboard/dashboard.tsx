@@ -1,16 +1,17 @@
 /* eslint-disable react/no-unescaped-entities */
+import NativeMap from "@/components/NativeMap.web";
 import { Ionicons } from "@expo/vector-icons";
 import { DrawerActions } from "@react-navigation/native";
-import { useNavigation, useRouter } from "expo-router"; // Zidna useRouter
+import { useNavigation, useRouter } from "expo-router";
 import React from "react";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -44,7 +45,11 @@ export default function Dashboard() {
         </View>
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.notifIcon}>
+          {/* Icône Notification → Alertes */}
+          <TouchableOpacity
+            style={styles.notifIcon}
+            onPress={() => router.push("/(admin)/alertes/alertes")}
+          >
             <Ionicons name="notifications-outline" size={24} color="#64748b" />
             <View style={styles.redDot} />
           </TouchableOpacity>
@@ -68,135 +73,130 @@ export default function Dashboard() {
 
       {/* --- 2. SCROLLABLE CONTENT --- */}
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {/* --- A. APERÇU DU SYSTÈME (STAT CARDS) --- */}
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionMainTitle}>Aperçu du système</Text>
-              <Text style={styles.sectionSubtitle}>
-                État en temps réel du réseau SmartBus
-              </Text>
-            </View>
-            <View style={styles.filterTabs}>
-              <TouchableOpacity style={styles.tabActive}>
-                <Text style={styles.tabTextActive}>Aujourd'hui</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.tab}>
-                <Text style={styles.tabText}>Hebdomadaire</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.tab}>
-                <Text style={styles.tabText}>Mensuel</Text>
-              </TouchableOpacity>
-            </View>
+        {/* --- A. APERÇU DU SYSTÈME (STAT CARDS) --- */}
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionMainTitle}>Aperçu du système</Text>
+            <Text style={styles.sectionSubtitle}>
+              État en temps réel du réseau SmartBus
+            </Text>
           </View>
-
-          <View style={styles.statsGrid}>
-            <StatCard
-              label="Bus Actifs"
-              value="24"
-              trend="+2 DEPUIS 1H"
-              icon="bus"
-              color="#3b82f6"
-              bg="#eff6ff"
-              width={cardWidth}
-            />
-            <StatCard
-              label="Lignes aujourd'hui"
-              value="18"
-              trend="STABLE"
-              icon="map"
-              color="#22c55e"
-              bg="#f0fdf4"
-              width={cardWidth}
-            />
-            <StatCard
-              label="Incidents"
-              value="02"
-              trend="-1 RÉSOLU"
-              icon="warning"
-              color="#ef4444"
-              bg="#fef2f2"
-              width={cardWidth}
-            />
-            <StatCard
-              label="Taux de charge"
-              value="76%"
-              trend="HEURE DE POINTE"
-              icon="stats-chart"
-              color="#f59e0b"
-              bg="#fffbe3"
-              width={cardWidth}
-            />
+          <View style={styles.filterTabs}>
+            <TouchableOpacity style={styles.tabActive}>
+              <Text style={styles.tabTextActive}>Aujourd'hui</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tab}>
+              <Text style={styles.tabText}>Hebdomadaire</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tab}>
+              <Text style={styles.tabText}>Mensuel</Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* --- B. ÉTAT DU RÉSEAU (MAP IN THE MIDDLE) --- */}
-          <View style={styles.mapSection}>
-            <View style={styles.mapHeader}>
-              <Text style={styles.sectionMainTitle}>
-                État du réseau en direct
-              </Text>
-              <TouchableOpacity>
-                <Text style={styles.fullScreenBtn}>Plein écran</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.mapPlaceholder}>
-              <Ionicons
-                name="navigate-circle-outline"
-                size={60}
-                color="#cbd5e1"
-              />
-              <Text
-                style={{ color: "#94a3b8", marginTop: 10, fontWeight: "500" }}
-              >
-                Chargement de la carte interactive...
-              </Text>
-            </View>
+        <View style={styles.statsGrid}>
+          <StatCard
+            label="Bus Actifs"
+            value="24"
+            trend="+2 DEPUIS 1H"
+            icon="bus"
+            color="#3b82f6"
+            bg="#eff6ff"
+            width={cardWidth}
+          />
+          <StatCard
+            label="Lignes aujourd'hui"
+            value="18"
+            trend="STABLE"
+            icon="map"
+            color="#22c55e"
+            bg="#f0fdf4"
+            width={cardWidth}
+          />
+          <StatCard
+            label="Incidents"
+            value="02"
+            trend="-1 RÉSOLU"
+            icon="warning"
+            color="#ef4444"
+            bg="#fef2f2"
+            width={cardWidth}
+          />
+          <StatCard
+            label="Taux de charge"
+            value="76%"
+            trend="HEURE DE POINTE"
+            icon="stats-chart"
+            color="#f59e0b"
+            bg="#fffbe3"
+            width={cardWidth}
+          />
+        </View>
+
+        {/* --- B. ÉTAT DU RÉSEAU (MAP IN THE MIDDLE) --- */}
+        <View style={{ marginBottom: 40 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 15,
+            }}
+          >
+            <Text style={styles.sectionMainTitle}>
+              État du réseau en direct
+            </Text>
+            <TouchableOpacity>
+              <Text style={styles.fullScreenBtn}>Plein écran</Text>
+            </TouchableOpacity>
           </View>
+          {/* Appel de ton composant */}
+          <NativeMap style={styles.mapContainer} />
+        </View>
 
-          {/* --- C. PERFORMANCE DU SYSTÈME (CHART AT THE BOTTOM) --- */}
-          <Text style={[styles.sectionMainTitle, { marginBottom: 15 }]}>
-            Performance du système
-          </Text>
-          <View style={styles.chartCard}>
-            <View style={styles.chartContent}>
-              <View style={styles.yAxis}>
-                {["100", "75", "50", "25", "0"].map((v) => (
-                  <Text key={v} style={styles.axisLabel}>
-                    {v}
-                  </Text>
-                ))}
-              </View>
-              <View style={styles.graphBody}>
-                {/* Simulation Curve Point */}
-                <View style={styles.tooltipContainer}>
-                  <View style={styles.tooltip}>
-                    <Text style={styles.tooltipTime}>10:00</Text>
-                    <Text style={styles.tooltipLoad}>load : 78</Text>
-                  </View>
-                  <View style={styles.blueDot} />
-                  <View style={styles.verticalLine} />
-                </View>
-                {/* Grid Simulation */}
-                {[1, 2, 3, 4].map((i) => (
-                  <View key={i} style={styles.gridLine} />
-                ))}
-              </View>
-            </View>
-            <View style={styles.xAxis}>
-              {[
-                "08:00",
-                "10:00",
-                "12:00",
-                "14:00",
-                "16:00",
-                "18:00",
-                "20:00",
-              ].map((t) => (
-                <Text key={t} style={styles.axisLabel}>
-                  {t}
+        {/* --- C. PERFORMANCE DU SYSTÈME (CHART AT THE BOTTOM) --- */}
+        <Text style={[styles.sectionMainTitle, { marginBottom: 15 }]}>
+          Performance du système
+        </Text>
+        <View style={styles.chartCard}>
+          <View style={styles.chartContent}>
+            <View style={styles.yAxis}>
+              {["100", "75", "50", "25", "0"].map((v) => (
+                <Text key={v} style={styles.axisLabel}>
+                  {v}
                 </Text>
               ))}
             </View>
+            <View style={styles.graphBody}>
+              {/* Simulation Curve Point */}
+              <View style={styles.tooltipContainer}>
+                <View style={styles.tooltip}>
+                  <Text style={styles.tooltipTime}>10:00</Text>
+                  <Text style={styles.tooltipLoad}>load : 78</Text>
+                </View>
+                <View style={styles.blueDot} />
+                <View style={styles.verticalLine} />
+              </View>
+              {/* Grid Simulation */}
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} style={styles.gridLine} />
+              ))}
+            </View>
+          </View>
+          <View style={styles.xAxis}>
+            {[
+              "08:00",
+              "10:00",
+              "12:00",
+              "14:00",
+              "16:00",
+              "18:00",
+              "20:00",
+            ].map((t) => (
+              <Text key={t} style={styles.axisLabel}>
+                {t}
+              </Text>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -342,12 +342,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  mapSection: { marginBottom: 40 },
-  mapHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
+  mapContainer: {
+    height: 350,
+    borderRadius: 24,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+    backgroundColor: "#fff", // au cas où
   },
   fullScreenBtn: { color: "#2563eb", fontWeight: "700", fontSize: 13 },
   mapPlaceholder: {
